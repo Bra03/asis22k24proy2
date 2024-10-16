@@ -1,7 +1,7 @@
 ﻿
-namespace Capa_Vista_Seguridad
+namespace ejecucionNav
 {
-    partial class Navegador
+    partial class compras
     {
         /// <summary>
         /// Required designer variable.
@@ -37,18 +37,20 @@ namespace Capa_Vista_Seguridad
             this.navegador1.BackColor = System.Drawing.Color.White;
             this.navegador1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.navegador1.Location = new System.Drawing.Point(0, 0);
+            this.navegador1.Margin = new System.Windows.Forms.Padding(4);
             this.navegador1.Name = "navegador1";
-            this.navegador1.Size = new System.Drawing.Size(800, 450);
+            this.navegador1.Size = new System.Drawing.Size(1113, 830);
             this.navegador1.TabIndex = 0;
             // 
-            // Navegador
+            // compras
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
+            this.ClientSize = new System.Drawing.Size(1113, 830);
             this.Controls.Add(this.navegador1);
-            this.Name = "Navegador";
-            this.Text = "Navegador";
+            this.Name = "compras";
+            this.Text = "compras";
+            this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
             this.ResumeLayout(false);
 
         }
