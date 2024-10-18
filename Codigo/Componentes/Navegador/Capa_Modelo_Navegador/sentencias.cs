@@ -149,7 +149,50 @@ namespace Capa_Modelo_Navegador
 
         //******************************************** CODIGO HECHO POR EMANUEL BARAHONA ***************************** 
         // Método que obtiene el último ID de una tabla
-        public string ObtenerId(string sTabla)
+        public string ObtenerId()
+        {
+            string sId = "";
+            OdbcConnection conn = cn.ProbarConexion();
+
+            try
+            {
+                // Verificar si la conexión está abierta
+                if (conn.State != ConnectionState.Open)
+                {
+                    throw new Exception("La conexión no está abierta.");
+                }
+
+                // Utilizar LAST_INSERT_ID() en lugar de SELECT MAX(...)
+                string sSql = "SELECT LAST_INSERT_ID();";
+                OdbcCommand command = new OdbcCommand(sSql, conn);
+                OdbcDataReader reader = command.ExecuteReader();
+
+                if (reader.Read())
+                {
+                    sId = reader.GetValue(0).ToString();
+                    Console.WriteLine("Último ID obtenido: " + sId);
+                }
+                else
+                {
+                    Console.WriteLine("No se pudo obtener el último ID.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error al obtener el último ID: " + ex.Message);
+            }
+            finally
+            {
+                if (conn != null && conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                    Console.WriteLine("Conexión cerrada después de obtener el último ID.");
+                }
+            }
+
+            return sId;
+        }
+        public string ContadorID(string sTabla)
         {
             string[] sCamposDesc = ObtenerCampos(sTabla);
             string sSql = "SELECT MAX(" + sCamposDesc[0] + ") FROM " + sTabla + ";";
@@ -1052,6 +1095,109 @@ namespace Capa_Modelo_Navegador
                 Console.WriteLine("Conexión cerrada después de la transacción.");
             }
         }
+
+        public string InsertarYObtenerUltimoId(string queryInsert)
+        {
+            string ultimoId = "";
+            try
+            {
+                // Usar la misma conexión y transacción para el INSERT y la obtención del ID
+                using (OdbcCommand cmd = new OdbcCommand(queryInsert, connection, transaction))
+                {
+                    cmd.ExecuteNonQuery();
+                    // Obtener el último ID insertado
+                    OdbcCommand getIdCmd = new OdbcCommand("SELECT LAST_INSERT_ID();", connection, transaction);
+                    ultimoId = getIdCmd.ExecuteScalar()?.ToString();
+                    if (string.IsNullOrEmpty(ultimoId))
+                    {
+                        throw new Exception("No se pudo obtener el último ID.");
+                    }
+                    Console.WriteLine("Último ID insertado: " + ultimoId);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error al insertar y obtener el último ID: " + ex.Message);
+                throw;
+            }
+            return ultimoId;
+        }
+
+        public void InsertarConTransaccion(string queryInsertPrincipal, List<string> queriesAdicionales)
+        {
+            try
+            {
+                IniciarTransaccion(); // Inicia la transacción
+
+                // Inserta en la tabla principal y obtiene el último ID
+                string ultimoId = InsertarYObtenerUltimoId(queryInsertPrincipal);
+
+                if (string.IsNullOrEmpty(ultimoId) || ultimoId == "0")
+                {
+                    throw new Exception("Error al obtener el último ID después de insertar en la tabla principal.");
+                }
+
+                // Inserta en las tablas adicionales usando el último ID
+                foreach (var queryAdicional in queriesAdicionales)
+                {
+                    EjecutarQueryTransaccion(queryAdicional.Replace("{ultimoId}", ultimoId));
+                }
+
+                CommitTransaccion(); // Confirma la transacción si todo está bien
+                Console.WriteLine("Transacción realizada exitosamente.");
+            }
+            catch (Exception ex)
+            {
+                RollbackTransaccion(); // Reversa la transacción si algo falla
+                Console.WriteLine("Error en la transacción: " + ex.Message);
+            }
+        }
+
+        public string ObtenerIdPorValorDescriptivo(string tabla, string campoClave, string campoDescriptivo, string valorDescriptivo)
+        {
+            string id = null;
+
+            // Construimos la consulta SQL utilizando parámetros
+            string query = $"SELECT {campoClave} FROM {tabla} WHERE {campoDescriptivo} = ?";
+
+            try
+            {
+                // Abre la conexión y ejecuta la consulta
+                using (OdbcConnection conexion = cn.ProbarConexion())
+                {
+                    conexion.Open(); // Aseguramos que la conexión esté abierta
+                    using (OdbcCommand command = new OdbcCommand(query, conexion))
+                    {
+                        // Agrega el valor descriptivo como parámetro
+                        command.Parameters.AddWithValue("?", valorDescriptivo);
+
+                        // Ejecuta la consulta y lee el resultado
+                        using (OdbcDataReader reader = command.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                // Asigna el valor del campo clave encontrado
+                                id = reader[campoClave].ToString();
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Muestra en consola el error encontrado
+                Console.WriteLine($"Error al obtener el ID para {valorDescriptivo}: {ex.Message}");
+                Console.WriteLine($"Error al obtener el ID para {query}: {ex.Message}");
+                return null; // Retorna null si hubo un error
+            }
+
+            // Retorna el ID encontrado, o null si no se encontró ningún registro
+            Console.WriteLine($"Error al obtener el ID para {query}");
+            return id;
+        }
+
+
+
 
     }
 }

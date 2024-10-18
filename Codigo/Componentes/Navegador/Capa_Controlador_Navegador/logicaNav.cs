@@ -15,11 +15,16 @@ namespace Capa_Controlador_Navegador
         // Obtiene el último ID insertado en la tabla especificada
         public string UltimoID(string sTabla)
         {
-            string sUltimoID = sn.ObtenerId(sTabla);
+            string sUltimoID = sn.ContadorID(sTabla);
             Console.WriteLine(sUltimoID);
             return sUltimoID;
         }
-
+        public string Contador(string sTabla)
+        {
+            string sUltimoID = sn.ContadorID(sTabla);
+            Console.WriteLine(sUltimoID);
+            return sUltimoID;
+        }
         // Realiza una consulta lógica sobre la tabla y la tabla relacionada, devolviendo un DataTable con los resultados
         public DataTable ConsultaLogica(string sTabla, List<Tuple<string, string, string, string>> relacionesForaneas)
         {
@@ -259,6 +264,19 @@ namespace Capa_Controlador_Navegador
             sn.RollbackTransaccion();
         }
 
+        public string ObtenerIdPorValorDescriptivo(string tabla, string campoClave, string campoDescriptivo, string valorDescriptivo)
+        {
+            try
+            {
+                // Llama al método en la capa de datos (sentencias) para obtener el ID
+                return sn.ObtenerIdPorValorDescriptivo(tabla, campoClave, campoDescriptivo, valorDescriptivo);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error en ObtenerIdPorValorDescriptivo: {ex.Message}");
+                return null;
+            }
+        }
 
 
 

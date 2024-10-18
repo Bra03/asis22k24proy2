@@ -36,7 +36,7 @@ namespace Capa_Vista_Navegador
         int iPosicionY = 30; // Posición Y inicial para componentes
         int iActivar = 0; // Variable para reconocer la función del botón de guardar (1. Ingresar, 2. Modificar, 3. Eliminar)
         int globalPosX = 600; // Posición inicial en X para la segunda columna
-        int globalPosY = 220; // Posición inicial en Y
+        int globalPosY = 100; // Posición inicial en Y
         int globalColumna = 0; // Contador de columnas global
         int globalFila = 0; // Contador de filas global
         string[] arrAliasCampos = new string[40]; // Alias para los campos
@@ -70,18 +70,25 @@ namespace Capa_Vista_Navegador
         string sEstadoAyuda = ""; // Estado de la ayuda
         string sTablaAdicional = "";
         // Variables globales
-        string tablaOrigenGlobal;
-        string campoOrigenGlobal;
-        string tablaDestinoGlobal;
-        string campoDestinoGlobal;
-        string operacionGlobal;
+        string tablaOrigenGlobal="";
+        string campoOrigenGlobal="";
+        string tablaDestinoGlobal="";
+        string campoDestinoGlobal="";
+        string operacionGlobal="";
+        string CampoDescriptivoGlobal = "";
+        string valorDescriptivoGlobal = "";
 
 
-        Font fFuenteLabels = new Font("Century Gothic", 13.0f, FontStyle.Regular, GraphicsUnit.Pixel); // Fuente para labels
+       Font fFuenteLabels = new Font("Century Gothic", 13.0f, FontStyle.Regular, GraphicsUnit.Pixel); // Fuente para labels
         ToolTip tpAyuda = new ToolTip(); // ToolTip para mostrar ayudas en la interfaz
         private List<Tuple<string, string, string, string>> relacionesForaneas = new List<Tuple<string, string, string, string>>();
         List<Tuple<string, string, string>> comboData = new List<Tuple<string, string, string>>();
         Dictionary<string, string[]> aliasPorTabla = new Dictionary<string, string[]>();
+        List<OperacionCampo> listaOperaciones = new List<OperacionCampo>();
+        // Declaración del diccionario a nivel de clase
+        Dictionary<string, List<string>> diccionarioTablasAsociativas = new Dictionary<string, List<string>>();
+        // Declaración del diccionario para almacenar las tablas asociativas
+        List<string> lstTablasParaComponentes = new List<string>();
 
 
 
@@ -157,16 +164,15 @@ namespace Capa_Vista_Navegador
                                 CreaComponentes();
                                 //MessageBox.Show("hola");
 
-                                if (lstTablasAdicionales != null)
+                                // Crear componentes de las tablas adicionales
+                                if (lstTablasParaComponentes != null)
                                 {
-                                    foreach (string tabla in lstTablasAdicionales)
+                                    foreach (string tabla in lstTablasParaComponentes)
                                     {
-                                        // Verifica si hay alias para la tabla actual en el diccionario
                                         if (aliasPorTabla.ContainsKey(tabla))
                                         {
-                                            // Obtén los alias para la tabla actual desde el diccionario
                                             string[] aliasTabla = aliasPorTabla[tabla];
-                                            string aliasString = string.Join(", ", aliasTabla); // Convierte el array de alias en una cadena de texto
+                                            string aliasString = string.Join(", ", aliasTabla);
                                             MessageBox.Show("Se generó para la tabla: " + tabla + " con alias: " + aliasString);
 
                                             CrearComponentesExtra(tabla);
@@ -177,6 +183,7 @@ namespace Capa_Vista_Navegador
                                         }
                                     }
                                 }
+
 
 
                                 ColorTitulo();
@@ -334,19 +341,18 @@ namespace Capa_Vista_Navegador
         {
             this.sIdAplicacion = sIdAplicacion; // Asigna el ID de la aplicación
         }
-        public void AsignarOperacion(string tablaOrigen, string campoOrigen, string tablaDestino, string campoDestino, string operacion)
+        public void AsignarOperacion(string tablaOrigen, string campoOrigen, string tablaDestino, string campoDestino, string operacion, string campoDescriptivo)
         {
-            tablaOrigenGlobal = tablaOrigen;
-            campoOrigenGlobal = campoOrigen;
-            tablaDestinoGlobal = tablaDestino;
-            campoDestinoGlobal = campoDestino;
-            operacionGlobal = operacion;
+            OperacionCampo nuevaOperacion = new OperacionCampo(tablaOrigen, campoOrigen, tablaDestino, campoDestino, operacion, campoDescriptivo);
+            listaOperaciones.Add(nuevaOperacion);
 
-            Console.WriteLine("Parámetros recibidos:");
-            Console.WriteLine($"Tabla Origen: {tablaOrigenGlobal}, Campo Origen: {campoOrigenGlobal}");
-            Console.WriteLine($"Tabla Destino: {tablaDestinoGlobal}, Campo Destino: {campoDestinoGlobal}");
-            Console.WriteLine($"Operación: {operacionGlobal}");
+            Console.WriteLine($"Operación '{operacion}' asignada entre {campoOrigen} y {campoDestino} con campo descriptivo '{campoDescriptivo}'.");
         }
+
+
+
+
+
 
         private int NumeroAlias()
         {
@@ -480,12 +486,28 @@ namespace Capa_Vista_Navegador
 
         public void AsignarTabla(string sTabla)
         {
-            sTablaPrincipal = sTabla; 
+            sTablaPrincipal = sTabla;
         }
 
         public void AsignarTablas(List<string> lstTablas)
         {
-            lstTablasAdicionales = lstTablas; 
+            lstTablasAdicionales = lstTablas;
+        }
+
+        public void AsignarTablaComponentes(List<string> lstTablas)
+        {
+            lstTablasParaComponentes = lstTablas;
+        }
+        public void AsignarAsociativas(List<Tuple<string, List<string>>> lstTablasAsociativas)
+        {
+            foreach (var tupla in lstTablasAsociativas)
+            {
+                string nombreTabla = tupla.Item1;  // Nombre de la tabla asociativa
+                List<string> columnasAsociadas = tupla.Item2;  // Lista de nombres de columnas y componentes
+
+                // Guardar directamente las columnas asociadas sin procesar componentes
+                diccionarioTablasAsociativas[nombreTabla] = columnasAsociadas; // Guarda ambas, campo y componente
+            }
         }
 
         public void AsignarNombreForm(string sNom)
@@ -560,91 +582,192 @@ namespace Capa_Vista_Navegador
                 }
             }
         }
-        public void RealizarOperacionCampo()
+        public bool RealizarOperaciones()
         {
             try
             {
-                // Obtener la clave primaria de la tabla origen y destino
-                string clavePrimariaOrigen = logic.ObtenerClavePrimaria(tablaOrigenGlobal);
-                string valorClavePrimariaOrigen = logic.UltimoID(tablaOrigenGlobal);  // Puedes ajustar esto según el contexto
-                string clavePrimariaDestino = logic.ObtenerClavePrimaria(tablaDestinoGlobal);
-                string valorClavePrimariaDestino = logic.UltimoID(tablaDestinoGlobal);  // Mismo ajuste aquí
-
-                // Obtener el valor del campo origen (por ejemplo, el número de productos comprados)
-                string valorOrigen = logic.ObtenerValorCampo(tablaOrigenGlobal, campoOrigenGlobal, clavePrimariaOrigen, valorClavePrimariaOrigen);
-
-                // Obtener el valor del campo destino (por ejemplo, las existencias actuales del producto en el inventario)
-                string valorDestino = logic.ObtenerValorCampo(tablaDestinoGlobal, campoDestinoGlobal, clavePrimariaDestino, valorClavePrimariaDestino);
-
-                // Obtener los tipos de datos de los campos origen y destino
-                string tipoCampoOrigen = logic.ObtenerTipoCampo(tablaOrigenGlobal, campoOrigenGlobal);
-                string tipoCampoDestino = logic.ObtenerTipoCampo(tablaDestinoGlobal, campoDestinoGlobal);
-
-                // Verificar que ambos campos sean del mismo tipo y de un tipo válido
-                if (!(tipoCampoOrigen.Contains("int") || tipoCampoOrigen.Contains("decimal")) || !(tipoCampoDestino.Contains("int") || tipoCampoDestino.Contains("decimal")))
+                foreach (var operacion in listaOperaciones)
                 {
-                    Console.WriteLine("Error: Los tipos de los campos no coinciden o no son numéricos.");
-                    return;
-                }
-
-                // Convertir los valores a enteros o decimales para realizar la operación
-                int resultadoOperacion = 0;
-                if (tipoCampoOrigen.Contains("int"))
-                {
-                    int valorNumOrigen = int.Parse(valorOrigen);
-                    int valorNumDestino = string.IsNullOrEmpty(valorDestino) ? 0 : int.Parse(valorDestino);  // Si valorDestino está vacío, usar 0
-
-                    // Realizar la operación según el tipo
-                    switch (operacionGlobal)
+                    // Obtener el valor descriptivo desde el componente del formulario
+                    string valorDescriptivo = ObtenerValorActualizar(operacion.CampoDescriptivo); // Usamos el campo descriptivo
+                    if (string.IsNullOrEmpty(valorDescriptivo))
                     {
-                        case "copiar":
-                            resultadoOperacion = valorNumOrigen;
-                            break;
-                        case "sumar":
-                            resultadoOperacion = valorNumDestino + valorNumOrigen;
-                            break;
-                        case "restar":
-                            resultadoOperacion = valorNumDestino - valorNumOrigen;
-                            break;
-                        default:
-                            Console.WriteLine("Operación no reconocida.");
-                            return;
+                        Console.WriteLine("Error: El valor descriptivo no ha sido proporcionado en el componente.");
+                        return false;
                     }
-                }
-                else if (tipoCampoOrigen.Contains("decimal"))
-                {
-                    decimal valorDecOrigen = decimal.Parse(valorOrigen);
-                    decimal valorDecDestino = string.IsNullOrEmpty(valorDestino) ? 0 : decimal.Parse(valorDestino);
 
-                    switch (operacionGlobal)
+                    // Obtener el valor del campo origen directamente desde el componente del formulario
+                    string valorOrigen = ObtenerValorActualizar(operacion.CampoOrigen); // Obtenemos el valor del componente
+                    Console.WriteLine($"El valor del componente origen ({operacion.CampoOrigen}) es: " + valorOrigen);
+
+                    if (string.IsNullOrEmpty(valorOrigen))
                     {
-                        case "copiar":
-                            resultadoOperacion = (int)valorDecOrigen;
-                            break;
-                        case "sumar":
-                            resultadoOperacion = (int)(valorDecDestino + valorDecOrigen);
-                            break;
-                        case "restar":
-                            resultadoOperacion = (int)(valorDecDestino - valorDecOrigen);
-                            break;
-                        default:
-                            Console.WriteLine("Operación no reconocida.");
-                            return;
+                        Console.WriteLine("Error: El valor origen no ha sido proporcionado en el componente.");
+                        return false;
                     }
+
+                    // Obtener el valor actual del campo destino (por ejemplo, las existencias actuales del producto en el inventario)
+                    string valorDestino = logic.ObtenerValorCampo(operacion.TablaDestino, operacion.CampoDestino, operacion.CampoDescriptivo, valorDescriptivo);
+
+                    // Obtener los tipos de datos de los campos origen y destino
+                    string tipoCampoOrigen = logic.ObtenerTipoCampo(operacion.TablaOrigen, operacion.CampoOrigen);
+                    string tipoCampoDestino = logic.ObtenerTipoCampo(operacion.TablaDestino, operacion.CampoDestino);
+
+                    // Verificar que ambos campos sean numéricos (int o decimal)
+                    if (!(tipoCampoOrigen.Contains("int") || tipoCampoOrigen.Contains("decimal")) || !(tipoCampoDestino.Contains("int") || tipoCampoDestino.Contains("decimal")))
+                    {
+                        Console.WriteLine($"Error: Los tipos de los campos no coinciden o no son numéricos. Campo origen: {tipoCampoOrigen}, Campo destino: {tipoCampoDestino}");
+                        return false;
+                    }
+
+                    // Convertir los valores a enteros o decimales según corresponda y realizar la operación
+                    if (tipoCampoOrigen.Contains("int"))
+                    {
+                        if (!RealizarOperacionEnteros(valorOrigen, valorDestino, operacion, valorDescriptivo))
+                        {
+                            return false; // Si alguna operación falla, se detiene el proceso
+                        }
+                    }
+                    else if (tipoCampoOrigen.Contains("decimal"))
+                    {
+                        if (!RealizarOperacionDecimales(valorOrigen, valorDestino, operacion, valorDescriptivo))
+                        {
+                            return false; // Si alguna operación falla, se detiene el proceso
+                        }
+                    }
+
+                    Console.WriteLine($"Operación '{operacion.Operacion}' realizada exitosamente entre {operacion.CampoOrigen} y {operacion.CampoDestino}.");
                 }
 
-                // Actualizar el valor en la tabla destino, usando la clave primaria
-                logic.ActualizarCampo(tablaDestinoGlobal, campoDestinoGlobal, resultadoOperacion.ToString(), clavePrimariaDestino, valorClavePrimariaDestino);
-                Console.WriteLine($"Operación '{operacionGlobal}' realizada exitosamente entre {campoOrigenGlobal} y {campoDestinoGlobal}.");
-            }
-            catch (FormatException ex)
-            {
-                Console.WriteLine($"Error de formato: {ex.Message}");
+                return true;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error al realizar la operación: {ex.Message}");
+                return false;
             }
+        }
+
+        private bool RealizarOperacionEnteros(string valorOrigen, string valorDestino, OperacionCampo operacion, string valordescriptivo)
+        {
+            try
+            {
+                int resultadoOperacion = 0;
+                int valorNumOrigen = int.Parse(valorOrigen);
+                int valorNumDestino = string.IsNullOrEmpty(valorDestino) ? 0 : int.Parse(valorDestino); // Si valorDestino está vacío, usar 0
+
+                switch (operacion.Operacion)
+                {
+                    case "copiar":
+                        resultadoOperacion = valorNumOrigen;
+                        break;
+                    case "sumar":
+                        resultadoOperacion = valorNumDestino + valorNumOrigen;
+                        break;
+                    case "restar":
+                        resultadoOperacion = valorNumDestino - valorNumOrigen;
+                        if (resultadoOperacion < 0)
+                        {
+                            Console.WriteLine("Error: El resultado de la resta no puede ser negativo.");
+                            return false;
+                        }
+                        break;
+                    default:
+                        Console.WriteLine("Operación no reconocida.");
+                        return false;
+                }
+
+                // Actualizar el valor en la tabla destino usando el campo descriptivo
+                logic.ActualizarCampo(operacion.TablaDestino, operacion.CampoDestino, resultadoOperacion.ToString(), operacion.CampoDescriptivo, valordescriptivo);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al realizar la operación con enteros: {ex.Message}");
+                return false;
+            }
+        }
+
+        private bool RealizarOperacionDecimales(string valorOrigen, string valorDestino, OperacionCampo operacion, string valordescriptivo)
+        {
+            try
+            {
+                decimal resultadoOperacionDecimal = 0;
+                decimal valorDecOrigen = decimal.Parse(valorOrigen);
+                decimal valorDecDestino = string.IsNullOrEmpty(valorDestino) ? 0 : decimal.Parse(valorDestino);
+
+                switch (operacion.Operacion)
+                {
+                    case "copiar":
+                        resultadoOperacionDecimal = valorDecOrigen;
+                        break;
+                    case "sumar":
+                        resultadoOperacionDecimal = valorDecDestino + valorDecOrigen;
+                        break;
+                    case "restar":
+                        resultadoOperacionDecimal = valorDecDestino - valorDecOrigen;
+                        if (resultadoOperacionDecimal < 0)
+                        {
+                            Console.WriteLine("Error: El resultado de la resta no puede ser negativo.");
+                            return false;
+                        }
+                        break;
+                    default:
+                        Console.WriteLine("Operación no reconocida.");
+                        return false;
+                }
+
+                // Actualizar el valor en la tabla destino usando el campo descriptivo
+                logic.ActualizarCampo(operacion.TablaDestino, operacion.CampoDestino, resultadoOperacionDecimal.ToString(), operacion.CampoDescriptivo, valordescriptivo);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al realizar la operación con decimales: {ex.Message}");
+                return false;
+            }
+        }
+
+
+        private string ObtenerValorActualizar(string campoNombre)
+        {
+            // Buscar el componente correspondiente por su nombre (que coincide con el campo de la base de datos)
+            Control componente = this.Controls.Find(campoNombre, true).FirstOrDefault();
+
+            // Si no se encuentra el componente, intenta buscarlo con el prefijo 'extra_'
+            if (componente == null)
+            {
+                componente = this.Controls.Find("extra_" + campoNombre, true).FirstOrDefault();
+            }
+
+            if (componente == null)
+            {
+                Console.WriteLine($"Error: No se encontró un componente con el nombre '{campoNombre}' o 'extra_{campoNombre}'.");
+                return null;
+            }
+
+            // Dependiendo del tipo de componente, obtener su valor
+            if (componente is ComboBox cb)
+            {
+                // Retorna el valor seleccionado en el ComboBox (ID), si no hay SelectedValue, retorna null
+                return cb.SelectedValue?.ToString();
+            }
+            else if (componente is DateTimePicker dtp)
+            {
+                return dtp.Value.ToString("yyyy-MM-dd"); // Formato de fecha
+            }
+            else if (componente is TextBox tb)
+            {
+                return tb.Text; // Retorna el valor de un TextBox
+            }
+            else if (componente is Button btn)
+            {
+                return (btn.Text == "Activado") ? "1" : "0"; // Retorna "1" si el botón está activado, "0" si está desactivado
+            }
+
+            return "";
         }
 
 
@@ -678,8 +801,8 @@ namespace Capa_Vista_Navegador
             int columnaActual = 0; // Contador de columna
             int maxFilasPorColumna = 5; // Número máximo de filas antes de cambiar de columna
             int posX = 50; // Posición inicial en X
-            int posY = 220; // Posición inicial en Y
-            int desplazamientoY = 55; // Espacio vertical entre controles
+            int posY = 100; // Posición inicial en Y
+            int desplazamientoY = 60; // Espacio vertical entre controles
 
             while (iIndex < iFin)
             {
@@ -818,7 +941,7 @@ namespace Capa_Vista_Navegador
             string[] alias = aliasPorTabla[tabla];
 
             int iIndex = 0;
-            int desplazamientoY = 50;  // Espacio vertical entre controles
+            int desplazamientoY = 60;  // Espacio vertical entre controles
             int desplazamientoX = 200; // Espacio horizontal entre columnas
 
             // Posiciones iniciales basadas en las variables globales
@@ -842,10 +965,7 @@ namespace Capa_Vista_Navegador
             for (int i = 0; i < sCampos.Length; i++)
             {
                 // Verificar si el campo es autoincremental o clave primaria
-                if (sLlaves[i] == "PRI")
-                {
-                    continue;
-                }
+             
 
                 // Buscar si el campo actual tiene un alias asignado en la lista de alias
                 string aliasActual = alias.FirstOrDefault(a => a == sCampos[i]);
@@ -1385,6 +1505,53 @@ namespace Capa_Vista_Navegador
             return sQuery;
         }
 
+        string CrearInsertParaAsociativas(string nombreTabla, Dictionary<string, string> valoresCampos)
+        {
+            if (string.IsNullOrEmpty(nombreTabla))
+            {
+                throw new ArgumentException("El nombre de la tabla no puede estar vacío.");
+            }
+
+            string sQuery = $"INSERT INTO {nombreTabla} (";
+            string sValores = "VALUES (";
+
+            string sCampos = "";
+            string sValoresCampos = "";
+
+            foreach (var campo in valoresCampos)
+            {
+                string tipoCampo = logic.ObtenerTipoCampo(nombreTabla, campo.Key);
+
+                // Agregar el campo al string de campos
+                sCampos += campo.Key + ", ";
+
+                // Verificar si el campo es numérico o no
+                if (tipoCampo.Contains("int") || tipoCampo.Contains("decimal"))
+                {
+                    // Validar que el valor sea numérico
+                    if (!int.TryParse(campo.Value, out _) && !decimal.TryParse(campo.Value, out _))
+                    {
+                        Console.WriteLine($"Error: El campo {campo.Key} debe contener un valor numérico.");
+                        return null;
+                    }
+                    // No agregar comillas para campos numéricos
+                    sValoresCampos += $"{campo.Value}, ";
+                }
+                else
+                {
+                    // Agregar comillas para campos no numéricos (strings, fechas, etc.)
+                    sValoresCampos += $"'{campo.Value}', ";
+                }
+            }
+
+            // Eliminar la última coma
+            sCampos = sCampos.TrimEnd(' ', ',');
+            sValoresCampos = sValoresCampos.TrimEnd(' ', ',');
+
+            sQuery += sCampos + ") " + sValores + sValoresCampos + ");";
+
+            return sQuery;
+        }
 
 
         string CrearInsertParaTablasExtras(string sNombreTabla, string idForaneo)
@@ -1661,33 +1828,18 @@ namespace Capa_Vista_Navegador
         //******************************************** CODIGO HECHO POR DIEGO MARROQUIN***************************** 
         private void Btn_Ingresar_Click(object sender, EventArgs e)
         {
-            
-            string[] arrTipos = logic.Tipos(sTablaPrincipal); 
+            string[] arrTipos = logic.Tipos(sTablaPrincipal);
+            string[] arrLlaves = logic.Llaves(sTablaPrincipal); // Llaves de la tabla principal
+            bool bTipoInt = false;
+            string sAuxId = "";
+            int iAuxLastId = 0;
 
-            bool bTipoInt = false; 
-            bool bExtraAI = false; 
-            string sAuxId = "";   
-            int iAuxLastId = 0;  
-
-            // Verifica si el primer campo de la sTablaPrincipal es de tipo entero y autoincremental
-            if (arrTipos[0] == "int") 
+            // Verifica si el primer campo de la tabla principal es de tipo entero y autoincremental
+            if (arrTipos[0] == "int" && arrLlaves[0] == "PRI")
             {
-                bTipoInt = true; 
-
-                // Obtiene el último ID insertado en la sTablaPrincipal si el campo es autoincrementable
-                sAuxId = logic.UltimoID(sTablaPrincipal); 
-
-                // Verifica si el ID existe o la sTablaPrincipal está vacía
-                if (!string.IsNullOrEmpty(sAuxId)) 
-                {
-                    iAuxLastId = Int32.Parse(sAuxId);
-                }
-                else
-                {
-                    iAuxLastId = 0; // Si no hay registros previos, inicializa el ID en 0
-                }
-
-                bExtraAI = true; 
+                bTipoInt = true;
+                sAuxId = logic.UltimoID(sTablaPrincipal);
+                iAuxLastId = !string.IsNullOrEmpty(sAuxId) ? Int32.Parse(sAuxId) : 0;
             }
 
             iActivar = 2; // Define que se realizará una inserción
@@ -1695,36 +1847,45 @@ namespace Capa_Vista_Navegador
 
             foreach (Control componente in Controls)
             {
-                if (componente is TextBox && bTipoInt && bExtraAI) 
+                string nombreComponente = componente.Name.Replace("extra_", ""); // Elimina el prefijo "extra_" si existe
+
+                // Verifica si es el campo autoincremental en la tabla principal
+                if (componente is TextBox && bTipoInt && nombreComponente == arrLlaves[0])
                 {
-                    // Incrementa el último ID para el nuevo registro
-                    iAuxLastId += 1; 
-                    componente.Text = iAuxLastId.ToString(); 
-                    componente.Enabled = false; // Deshabilita el campo autoincremental para que no sea editable
-                    bTipoInt = false;
-                    bExtraAI = false; 
+                    iAuxLastId += 1;
+                    componente.Text = iAuxLastId.ToString();
+                    componente.Enabled = false; // Bloquea el campo autoincremental
+                }
+                else if (componente.Name.Contains("extra"))
+                {
+                    foreach (string nombreTablaAdicional in lstTablasParaComponentes)
+                    {
+                        string[] arrTiposAdicional = logic.Tipos(nombreTablaAdicional);
+                        string[] arrLlavesAdicional = logic.Llaves(nombreTablaAdicional);
+
+                        if (arrTiposAdicional[0] == "int" && arrLlavesAdicional[0] == nombreComponente)
+                        {
+                            sAuxId = logic.UltimoID(nombreTablaAdicional);
+                            iAuxLastId = !string.IsNullOrEmpty(sAuxId) ? Int32.Parse(sAuxId) : 0;
+                            iAuxLastId += 1;
+                            componente.Text = iAuxLastId.ToString();
+                            componente.Enabled = false; // Bloquea el campo autoincremental
+                        }
+                    }
                 }
                 else if (componente is TextBox || componente is DateTimePicker || componente is ComboBox)
                 {
                     componente.Enabled = true;
                     componente.Text = "";
                 }
-                else if (componente is Button)
-                {
-                    componente.Enabled = true;
-                }
-
-                Btn_Ingresar.Enabled = false;
-                Btn_Modificar.Enabled = false;
-                Btn_Eliminar.Enabled = false;
-                Btn_Cancelar.Enabled = true;
             }
 
-            BotonesYPermisosSinMensaje();
-            // Habilita y deshabilita botones según el usuario
             Btn_Ingresar.Enabled = false;
             Btn_Modificar.Enabled = false;
             Btn_Eliminar.Enabled = false;
+            Btn_Cancelar.Enabled = true;
+
+            BotonesYPermisosSinMensaje(); // Actualiza los permisos de los botones
         }
 
         //******************************************** CODIGO HECHO POR DIEGO MARROQUIN***************************** 
@@ -2154,6 +2315,7 @@ namespace Capa_Vista_Navegador
 
                 // Habilitar y deshabilitar botones según permisos del usuario
                 BotonesYPermisosSinMensaje();
+                Deshabilitarcampos_y_botones();
 
                 // Mostrar mensaje de éxito al refrescar los datos
                 MessageBox.Show(
@@ -2555,7 +2717,6 @@ namespace Capa_Vista_Navegador
                     MessageBoxIcon.Question
                 );
 
-                // Si el usuario selecciona "No", se cancela la operación.
                 if (drResult == DialogResult.No)
                 {
                     return;
@@ -2563,7 +2724,6 @@ namespace Capa_Vista_Navegador
 
                 // Verifica si todos los campos están llenos antes de proceder.
                 bool bLleno = true;
-
                 foreach (Control componente in Controls)
                 {
                     if (componente is TextBox || componente is DateTimePicker || componente is ComboBox)
@@ -2576,27 +2736,6 @@ namespace Capa_Vista_Navegador
                     }
                 }
 
-                foreach (Control componente in Controls)
-                {
-                    if (componente is TextBox tb && string.IsNullOrEmpty(tb.Text))
-                    {
-
-                        Console.WriteLine($"El campo {tb.Name} no puede estar vacío.", "Validación de Campos", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-                    else if (componente is ComboBox cb && cb.SelectedItem == null)
-                    {
-                        Console.WriteLine($"Debe seleccionar un valor en {cb.Name}.", "Validación de Campos", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-                    else if (componente is DateTimePicker dtp && dtp.Value == null)
-                    {
-                        Console.WriteLine($"El campo {dtp.Name} no puede estar vacío.", "Validación de Campos", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-                }
-
-                // Si hay campos vacíos, muestra un mensaje de advertencia y no guarda el registro.
                 if (!bLleno)
                 {
                     MessageBox.Show(
@@ -2608,6 +2747,18 @@ namespace Capa_Vista_Navegador
                     );
                     return;
                 }
+
+                // Verificar las operaciones de campo antes de cualquier inserción
+                if (listaOperaciones.Count > 0)
+                {
+                    // Ejecutamos todas las operaciones de la lista de una sola vez
+                    if (!RealizarOperaciones())
+                    {
+                        MessageBox.Show("Error en las operaciones de campos. No se pudo completar una o más operaciones.", "Error de Operación", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return; // Cancelamos si alguna operación no es válida
+                    }
+                }
+
 
                 // Lista para almacenar las consultas SQL que se ejecutarán.
                 List<string> lstQueries = new List<string>();
@@ -2667,66 +2818,91 @@ namespace Capa_Vista_Navegador
                             string sQueryPrimeraTabla = CrearInsert(sTablaPrincipal);
                             Console.WriteLine("Consulta generada para la tabla principal: " + sQueryPrimeraTabla);
 
-                            // Verifica si la consulta no es nula antes de proceder
                             if (string.IsNullOrEmpty(sQueryPrimeraTabla))
                             {
                                 Console.WriteLine("Error: La consulta generada para la tabla principal es nula o vacía.");
-                                return; // Salimos si la consulta es nula para evitar errores
+                                return;
                             }
 
-                            logic.NuevoQuery(sQueryPrimeraTabla); // Inserta el nuevo registro en la tabla principal
+                            // Insertar en la tabla principal
+                            logic.NuevoQuery(sQueryPrimeraTabla);
                             Console.WriteLine("Registro insertado en la tabla principal exitosamente.");
 
                             lg.funinsertarabitacora(sIdUsuario, "Se insertó en " + sTablaPrincipal, sTablaPrincipal, sIdAplicacion);
 
-                            // Obtiene el último ID insertado en la tabla principal, que se usará como clave foránea en las tablas adicionales
+                            // Obtiene el último ID insertado en la tabla principal
                             string sUltimoIdPrimeraTabla = logic.UltimoID(sTablaPrincipal);
-                            Console.WriteLine("Último ID obtenido de la tabla principal: " + sUltimoIdPrimeraTabla);
-
-                            // Verifica si el ID obtenido no es nulo o vacío
                             if (string.IsNullOrEmpty(sUltimoIdPrimeraTabla))
                             {
                                 Console.WriteLine("Error: El último ID obtenido de la tabla principal es nulo o vacío.");
-                                return; // Salimos si el ID es nulo para evitar errores en las tablas adicionales
+                                return;
                             }
 
-                            // Itera sobre las tablas adicionales para insertar registros relacionados
+                            // Inserta en las tablas adicionales
                             foreach (string sTablaAdicional in lstTablasAdicionales)
                             {
-                                Console.WriteLine("Procesando tabla adicional: " + sTablaAdicional);
-                                if (!string.IsNullOrEmpty(sTablaAdicional))
+                                string sQueryAdicional = CrearInsertParaTablasExtras(sTablaAdicional, sUltimoIdPrimeraTabla);
+                                if (!string.IsNullOrEmpty(sQueryAdicional))
                                 {
-                                    // Inserta en la tabla adicional usando el ID de la tabla principal como clave foránea
-                                    string sQueryAdicional = CrearInsertParaTablasExtras(sTablaAdicional, sUltimoIdPrimeraTabla);
-                                    Console.WriteLine("Consulta generada para la tabla adicional " + sTablaAdicional + ": " + sQueryAdicional);
+                                    lstQueries.Add(sQueryAdicional);
+                                }
+                                else
+                                {
+                                    Console.WriteLine("Error: La consulta generada para la tabla adicional " + sTablaAdicional + " es nula o vacía.");
+                                }
+                            }
+                            // Insertar en las tablas asociativas
+                            // **Insertar en las tablas asociativas**
+                            // **Insertar en las tablas asociativas**
+                            foreach (var asociativa in diccionarioTablasAsociativas)
+                            {
+                                string nombreTablaAsociativa = asociativa.Key;  // Nombre de la tabla asociativa
+                                List<string> columnas = asociativa.Value;       // Lista de columnas asociadas a la tabla
 
-                                    if (!string.IsNullOrEmpty(sQueryAdicional))
+                                // Diccionario para almacenar los valores de los campos que vamos a insertar
+                                Dictionary<string, string> valoresCampos = new Dictionary<string, string>();
+
+                                // Recorremos las columnas y obtenemos los valores del formulario
+                                for (int i = 0; i < columnas.Count; i += 2)
+                                {
+                                    string nombreCampo = columnas[i];       // Este es el nombre del campo
+                                    string nombreComponente = columnas[i + 1]; // Este es el nombre del componente (valor del campo)
+
+                                    // Usa la función ObtenerValorActualizar para obtener el valor del componente
+                                    string valorCampo = ObtenerValorActualizar(nombreComponente);
+                                    Console.WriteLine("VALOR COMPONENTE: " + nombreComponente + " VALOR: " + valorCampo);
+
+                                    if (!string.IsNullOrEmpty(valorCampo))
                                     {
-                                        lstQueries.Add(sQueryAdicional); // Añade la consulta adicional a la lista
+                                        valoresCampos[nombreCampo] = valorCampo;  // Almacena el valor en el diccionario
                                     }
                                     else
                                     {
-                                        Console.WriteLine("Error: La consulta generada para la tabla adicional " + sTablaAdicional + " es nula o vacía.");
+                                        Console.WriteLine($"Advertencia: No se pudo obtener un valor válido para el componente {nombreComponente}.");
                                     }
                                 }
-                            }
 
-                            // Ejecuta todas las consultas para insertar datos en múltiples tablas
-                            Console.WriteLine("Ejecutando las consultas generadas para las tablas adicionales...");
+                                // Validación: Solo generar la consulta si todos los campos requeridos tienen valores válidos
+                                if (valoresCampos.Count == columnas.Count / 2)  // Asegurarse de que tenemos valores para todos los campos
+                                {
+                                    string sQueryAsociativa = CrearInsertParaAsociativas(nombreTablaAsociativa, valoresCampos);
+                                    if (!string.IsNullOrEmpty(sQueryAsociativa))
+                                    {
+                                        lstQueries.Add(sQueryAsociativa);  // Solo agregar la consulta si es válida
+                                        Console.WriteLine("QUERY GENERADO: " + sQueryAsociativa);
+                                    }
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"Error: No se pudieron obtener todos los valores para la tabla {nombreTablaAsociativa}.");
+                                }
+                            }
+                            // Ejecutar todas las consultas
                             logic.InsertarDatosEnMultiplesTablas(lstQueries);
-                            Console.WriteLine("Todas las consultas ejecutadas exitosamente.");
-
-                            // **Aquí llamamos a la función para realizar la operación entre campos**
-                            if (operacionGlobal != "")
-                            {
-                                RealizarOperacionCampo();
-                            }
-
                             MessageBox.Show("El registro ha sido guardado correctamente.", "Guardado Exitoso", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         }
                         catch (Exception ex)
                         {
-                            // Agrega un log detallado del error en la consola
                             Console.WriteLine("Error al guardar los registros: " + ex.Message);
                             MessageBox.Show($"Ocurrió un error al guardar los registros: {ex.Message}", "Error de Guardado", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         }
@@ -2744,7 +2920,6 @@ namespace Capa_Vista_Navegador
             }
             catch (Exception ex)
             {
-                // Manejo de errores, muestra un mensaje al usuario con los detalles del error.
                 MessageBox.Show(
                     "Ocurrió un error durante el guardado del registro.\n\n" +
                     "Detalles del error: " + ex.Message + "\n\n" +
@@ -2755,7 +2930,6 @@ namespace Capa_Vista_Navegador
                 );
             }
         }
-
         //******************************************** CODIGO HECHO POR BRAYAN HERNANDEZ *****************************
 
 
@@ -2817,8 +2991,7 @@ namespace Capa_Vista_Navegador
 
                     iIndex++;
                 }
-                Btn_Eliminar.Enabled = true;
-                Btn_Modificar.Enabled = true;
+            
             }
 
             // Si se obtiene el valor de la clave primaria, consultar las tablas relacionadas
@@ -2831,6 +3004,8 @@ namespace Capa_Vista_Navegador
             {
                 Console.WriteLine("No se detectó clave primaria.");
             }
+
+            BotonesYPermisosSinMensaje();
         }
 
         private void LlenarComponentesExtraDinamico(string primaryKeyValue)

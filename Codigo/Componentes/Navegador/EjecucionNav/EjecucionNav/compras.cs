@@ -28,7 +28,7 @@ namespace ejecucionNav
             navegador1.AsignarComboConTabla("vehiculos", "Pk_vehiculo", "nombre_vehiculo", 1);
             navegador1.AsignarForaneas("vehiculos", "nombre_vehiculo", "Fk_vehiculo", "Pk_vehiculo");
 
-            navegador1.AsignarOperacion( "detalle_venta_vehiculos", "cantidad_vendida", "inventario_vehiculos", "cantidad_existencia", "restar");
+            navegador1.AsignarOperacion( "detalle_venta_vehiculos", "cantidad_vendida", "inventario_vehiculos", "cantidad_existencia", "restar", "Fk_vehiculo");
             
             List<string> tablas = new List<string> { "venta" };
             navegador1.AsignarTablas(tablas);

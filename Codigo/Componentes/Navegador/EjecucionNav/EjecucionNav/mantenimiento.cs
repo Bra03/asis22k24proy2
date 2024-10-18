@@ -15,7 +15,7 @@ namespace ejecucionNav
         public mantenimiento()
         {
             InitializeComponent();
-            string[] alias = { "codigo", "nombre", "marca", "tipo", "existencia", "estado" };
+            string[] alias = { "codigo", "nombre", "marca", "tipo", "estado" };
             navegador1.AsignarAlias(alias);
             navegador1.AsignarSalida(this);
             navegador1.AsignarColorFondo(Color.LightBlue);
@@ -31,19 +31,19 @@ namespace ejecucionNav
             navegador1.AsignarForaneas("tipos_vehiculos", "nombre_tipo", "codigo_tipo", "codigo_tipo");
 
             navegador1.AsignarComboConTabla("bodegas", "Pk_bodega", "nombre_bodega", 1);
-
+       
             navegador1.AsignarNombreForm("VEHICULOS");
             // Configuración de los alias para las tablas adicionales
 
             List<string> tablas = new List<string> { "inventario_vehiculos"};
             navegador1.AsignarTablas(tablas);
-
-            string[] aliasinventario_vehiculos = { "Pk_bodega", "estado" };
+            string[] aliasinventario_vehiculos = { "Pk_bodega","cantidad_existencia", "estado" };
             navegador1.AsignarAliasExtras("inventario_vehiculos", aliasinventario_vehiculos);
+            
 
             
 
-            navegador1.AsignarOperacion("vehiculos", "existencia_vehiculo", "inventario_vehiculos", "cantidad_existencia","copiar");
+           // navegador1.AsignarOperacion("vehiculos", "existencia_vehiculo", "inventario_vehiculos", "cantidad_existencia","copiar");
             
 
           
