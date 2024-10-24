@@ -15,7 +15,7 @@ namespace ejecucionNav
         public mantenimiento()
         {
             InitializeComponent();
-            string[] alias = { "codigo", "nombre", "marca", "tipo", "estado" };
+            string[] alias = { "codigo", "Nombre", "descripcion", "estado", "Linea", "Marca" };
             navegador1.AsignarAlias(alias);
             navegador1.AsignarSalida(this);
             navegador1.AsignarColorFondo(Color.LightBlue);
@@ -23,30 +23,64 @@ namespace ejecucionNav
             navegador1.ObtenerIdAplicacion("1000");
             navegador1.AsignarAyuda("1");
             navegador1.ObtenerIdUsuario("admin");
-            navegador1.AsignarTabla("vehiculos");
-            navegador1.AsignarComboConTabla("marcas_vehiculos", "codigo_marca", "nombre_marca", 1); ; // ComboBox para marcas de vehículos
-            navegador1.AsignarComboConTabla("tipos_vehiculos", "codigo_tipo", "nombre_tipo", 1); // ComboBox para tipos de vehículos
+            navegador1.AsignarTabla("productos");
+            navegador1.AsignarNombreForm("PRODUCTOS");
 
-            navegador1.AsignarForaneas("marcas_vehiculos", "nombre_marca", "codigo_marca", "codigo_marca");
-            navegador1.AsignarForaneas("tipos_vehiculos", "nombre_tipo", "codigo_tipo", "codigo_tipo");
+            navegador1.AsignarComboConTabla("lineas", "codigo_linea", "nombre_linea", 1);
+            navegador1.AsignarComboConTabla("marcas", "codigo_marca", "nombre_marca", 1);
+            navegador1.AsignarComboConTabla("bodega", "Pk_BODCODIGO", "BODNOMBRE", 1);
 
-            navegador1.AsignarComboConTabla("bodegas", "Pk_bodega", "nombre_bodega", 1);
-       
-            navegador1.AsignarNombreForm("VEHICULOS");
-            // Configuración de los alias para las tablas adicionales
 
-            List<string> tablas = new List<string> { "inventario_vehiculos"};
+            navegador1.AsignarForaneas("lineas", "nombre_linea", "codigo_linea", "codigo_linea");
+            navegador1.AsignarForaneas("marcas", "nombre_marca", "codigo_marca", "codigo_marca");
+
+
+
+            List<string> tablas = new List<string> { "inventario" };
             navegador1.AsignarTablas(tablas);
-            string[] aliasinventario_vehiculos = { "Pk_bodega","cantidad_existencia", "estado" };
-            navegador1.AsignarAliasExtras("inventario_vehiculos", aliasinventario_vehiculos);
-            
+
+
+
+            List<string> componetes = new List<string> { "inventario", "existencias" };
+            navegador1.AsignarTablaComponentes(componetes);
+
+            string[] aliasinventario = { "INVCODIGO", "INVCANTIDAD", "estado" };
+            navegador1.AsignarAliasExtras("inventario", aliasinventario);
+
+
+            string[] aliasexistencias = { "Fk_BODCODIGO" };
+            navegador1.AsignarAliasExtras("existencias", aliasexistencias);
 
             
 
-           // navegador1.AsignarOperacion("vehiculos", "existencia_vehiculo", "inventario_vehiculos", "cantidad_existencia","copiar");
-            
 
-          
+
+            //navegador1.AsignarOperacion("inventario", "INVCANTIDAD", "existencias", "EXISALDO", "sumar", "INVCODIGO");
+
+            // campo1, campo2, operacion, campo destino
+
+            // campo1, campo2, operacion, campo destino
+
+            //campodestnio1, campodesntino2, operacion, campodestinofinal
+
+            List<Tuple<string, List<string>>> tablasAsociativas = new List<Tuple<string, List<string>>>()
+            {
+                // Ejemplo para la tabla asociativa 'existencias'
+                Tuple.Create("existencias", new List<string>
+                {
+                    "Fk_BODCODIGO","Fk_BODCODIGO",    // Primera clave foránea
+                    
+                    "EXISALDO","INVCANTIDAD",
+
+                    "INVCODIGO", "INVCODIGO",      // Segunda clave foránea
+                    
+                    "estado","estado"
+
+                })
+            };
+
+            // Llamada al método
+            navegador1.AsignarAsociativas(tablasAsociativas);
         }
 
         private void navegador1_Load(object sender, EventArgs e)

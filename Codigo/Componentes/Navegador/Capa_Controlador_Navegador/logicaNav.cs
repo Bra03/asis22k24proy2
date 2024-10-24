@@ -128,6 +128,9 @@ namespace Capa_Controlador_Navegador
             return sn.ObtenerItems(sTabla, sCampoClave, sCampoDisplay);
         }
 
+
+
+
         // Devuelve la clave primaria correspondiente a un valor específico en un campo específico de la tabla
         public string LlaveCampolo(string sTabla, string sCampo, string sValor)
         {

@@ -341,13 +341,14 @@ namespace Capa_Vista_Navegador
         {
             this.sIdAplicacion = sIdAplicacion; // Asigna el ID de la aplicación
         }
-        public void AsignarOperacion(string tablaOrigen, string campoOrigen, string tablaDestino, string campoDestino, string operacion, string campoDescriptivo)
+        public void AsignarOperacion(string tablaOrigen, string campoOrigen, string tablaDestino, string campoDestino, string operacion, string campoCondicional, string valorCondicional)
         {
-            OperacionCampo nuevaOperacion = new OperacionCampo(tablaOrigen, campoOrigen, tablaDestino, campoDestino, operacion, campoDescriptivo);
+            OperacionCampo nuevaOperacion = new OperacionCampo(tablaOrigen, campoOrigen, tablaDestino, campoDestino, operacion, campoCondicional, valorCondicional);
             listaOperaciones.Add(nuevaOperacion);
 
-            Console.WriteLine($"Operación '{operacion}' asignada entre {campoOrigen} y {campoDestino} con campo descriptivo '{campoDescriptivo}'.");
+            Console.WriteLine($"Operación '{operacion}' asignada entre {campoOrigen} y {campoDestino} con condición en '{campoCondicional}' = '{valorCondicional}'.");
         }
+
 
 
 
@@ -552,6 +553,79 @@ namespace Capa_Vista_Navegador
             cNuevoColorFondo = colNuevo; 
         }
 
+
+        public void AsignarOperacionTransaccion(string tablaOrigen, string campoOrigen, string tablaDestino, string campoDestino, string operacion, string campoCondicional, string valorCondicional)
+        {
+            OperacionCampo nuevaOperacion = new OperacionCampo(tablaOrigen, campoOrigen, tablaDestino, campoDestino, operacion, campoCondicional, valorCondicional);
+            listaOperaciones.Add(nuevaOperacion);
+        }
+        public bool RealizarOperacionesTransaccion()
+        {
+            try
+            {
+                foreach (var operacion in listaOperaciones)
+                {
+                    // Obtener el valor condicional (por ejemplo, el código del producto)
+                    string valorCondicional = operacion.ValorCondicional; // Este valor ya viene de la operación
+                    Console.WriteLine($"El valor del componente condicional ({operacion.CampoCondicional}) es: " + valorCondicional);
+
+                    if (string.IsNullOrEmpty(valorCondicional))
+                    {
+                        Console.WriteLine("Error: El valor condicional no ha sido proporcionado.");
+                        return false;
+                    }
+
+                    // **Obtener el valor origen desde la base de datos**, no desde un componente
+                    string valorOrigen = logic.ObtenerValorCampo(operacion.TablaOrigen, operacion.CampoOrigen, operacion.CampoCondicional, valorCondicional);
+                    string valorDestino = logic.ObtenerValorCampo(operacion.TablaDestino, operacion.CampoDestino, operacion.CampoCondicional, valorCondicional);
+
+                    if (string.IsNullOrEmpty(valorOrigen) || string.IsNullOrEmpty(valorDestino))
+                    {
+                        Console.WriteLine("Error: No se encontraron los valores en la base de datos.");
+                        return false;
+                    }
+
+                    // Obtener los tipos de datos de los campos origen y destino
+                    string tipoCampoOrigen = logic.ObtenerTipoCampo(operacion.TablaOrigen, operacion.CampoOrigen);
+                    string tipoCampoDestino = logic.ObtenerTipoCampo(operacion.TablaDestino, operacion.CampoDestino);
+
+                    // Verificar que ambos campos sean numéricos (int o decimal)
+                    if (!(tipoCampoOrigen.Contains("int") || tipoCampoOrigen.Contains("decimal")) || !(tipoCampoDestino.Contains("int") || tipoCampoDestino.Contains("decimal")))
+                    {
+                        Console.WriteLine($"Error: Los tipos de los campos no coinciden o no son numéricos. Campo origen: {tipoCampoOrigen}, Campo destino: {tipoCampoDestino}");
+                        return false;
+                    }
+
+                    // Realizar la operación entre valores
+                    if (tipoCampoOrigen.Contains("int"))
+                    {
+                        if (!RealizarOperacionEnteros(valorOrigen, valorDestino, operacion, valorCondicional))
+                        {
+                            return false;
+                        }
+                    }
+                    else if (tipoCampoOrigen.Contains("decimal"))
+                    {
+                        if (!RealizarOperacionDecimales(valorOrigen, valorDestino, operacion, valorCondicional))
+                        {
+                            return false;
+                        }
+                    }
+
+                    Console.WriteLine($"Operación '{operacion.Operacion}' realizada exitosamente entre {operacion.CampoOrigen} y {operacion.CampoDestino}.");
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al realizar la operación: {ex.Message}");
+                return false;
+            }
+        }
+
+
+
         public void AsignarComboConLista(int iPos, string sLista)
         {
             iPosicionCombo = iPos - 1; 
@@ -575,27 +649,160 @@ namespace Capa_Vista_Navegador
                 }
                 else
                 {
-                    arrListaItems[iContadorArray] = sPalabra; 
+                    arrListaItems[iContadorArray] = sPalabra;
                     sPalabra = "";
                     iContadorArray++;
                     iContadorCadena++;
                 }
             }
         }
+        //******************************************** CODIGO HECHO POR BRAYAN HERNANDEZ ***************************** 
+        public void AsignarOperacionEnTiempoReal(string componenteOrigen1, string componenteOrigen2, string operacion, string componenteDestino)
+        {
+            string valorOrigen1 = ObtenerValorActualizar(componenteOrigen1); // Validar si contiene el nombre del campo
+            string valorOrigen2 = ObtenerValorActualizar(componenteOrigen2);
+            Control compDest = this.Controls.Find(componenteDestino, true).FirstOrDefault();
+
+          /*  if (string.IsNullOrEmpty(valorOrigen1) || string.IsNullOrEmpty(valorOrigen2) || compDest == null)
+            {
+                Console.WriteLine($"Error: Uno o más componentes no fueron encontrados o están vacíos. Verifique los nombres de los componentes.");
+                return;
+            }*/
+
+            // Suscribirse a los eventos de cambio de ambos componentes origen
+            Control comp1 = this.Controls.Find(componenteOrigen1, true).FirstOrDefault();
+            Control comp2 = this.Controls.Find(componenteOrigen2, true).FirstOrDefault();
+
+            if (comp1 != null)
+            {
+                if (comp1 is TextBox tb1)
+                {
+                    tb1.TextChanged += (sender, e) => EjecutarOperacionTiempoReal(ObtenerValorActualizar(componenteOrigen1), ObtenerValorActualizar(componenteOrigen2), operacion, compDest);
+                }
+                else if (comp1 is ComboBox cb1)
+                {
+                    cb1.SelectedIndexChanged += (sender, e) => EjecutarOperacionTiempoReal(ObtenerValorActualizar(componenteOrigen1), ObtenerValorActualizar(componenteOrigen2), operacion, compDest);
+                }
+            }
+
+            if (comp2 != null)
+            {
+                if (comp2 is TextBox tb2)
+                {
+                    tb2.TextChanged += (sender, e) => EjecutarOperacionTiempoReal(ObtenerValorActualizar(componenteOrigen1), ObtenerValorActualizar(componenteOrigen2), operacion, compDest);
+                }
+                else if (comp2 is ComboBox cb2)
+                {
+                    cb2.SelectedIndexChanged += (sender, e) => EjecutarOperacionTiempoReal(ObtenerValorActualizar(componenteOrigen1), ObtenerValorActualizar(componenteOrigen2), operacion, compDest);
+                }
+            }
+        }
+
+        private void EjecutarOperacionTiempoReal(string valor1, string valor2, string operacion, Control componenteDestino)
+        {
+            if (string.IsNullOrEmpty(valor1) || string.IsNullOrEmpty(valor2))
+            {
+                Console.WriteLine("Error: Ambos valores deben estar presentes antes de realizar la operación.");
+                return;
+            }
+
+            try
+            {
+                decimal resultado = 0;
+                decimal num1 = decimal.Parse(valor1);
+                decimal num2 = decimal.Parse(valor2);
+
+                switch (operacion.ToLower())
+                {
+                    case "sumar":
+                        resultado = num1 + num2;
+                        break;
+                    case "restar":
+                        resultado = num1 - num2;
+                        break;
+                    case "multiplicar":
+                        resultado = num1 * num2;
+                        break;
+                    case "dividir":
+                        if (num2 == 0)
+                        {
+                            Console.WriteLine("Error: No se puede dividir entre cero.");
+                            return;
+                        }
+                        resultado = num1 / num2;
+                        break;
+                    default:
+                        Console.WriteLine("Operación no reconocida.");
+                        return;
+                }
+
+                // Actualizar el valor del componente destino
+                if (componenteDestino is TextBox tb)
+                {
+                    tb.Text = resultado.ToString();
+                }
+                else if (componenteDestino is Label lbl)
+                {
+                    lbl.Text = resultado.ToString();
+                }
+                else
+                {
+                    Console.WriteLine("Error: El componente destino no es compatible.");
+                }
+
+                Console.WriteLine($"Operación {operacion} realizada. Resultado: {resultado}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al realizar la operación: {ex.Message}");
+            }
+        }
+
+        private string ObtenerValorDeComponente(string campoNombre)
+        {
+            // Buscar el componente correspondiente por su nombre exacto (que coincide con el campo de la base de datos)
+            Control componente = this.Controls.Find(campoNombre, true).FirstOrDefault();
+
+            // Si no se encuentra el componente, intenta buscarlo con el prefijo 'extra_'
+            if (componente == null)
+            {
+                componente = this.Controls.Find("extra_" + campoNombre, true).FirstOrDefault();
+            }
+
+            if (componente == null)
+            {
+                Console.WriteLine($"Error: No se encontró un componente con el nombre '{campoNombre}' o 'extra_{campoNombre}'.");
+                return null;
+            }
+
+            // Obtener el valor del componente según su tipo
+            if (componente is ComboBox cb)
+            {
+                return cb.SelectedValue?.ToString(); // Obtener el valor seleccionado en el ComboBox
+            }
+            else if (componente is DateTimePicker dtp)
+            {
+                return dtp.Value.ToString("yyyy-MM-dd"); // Obtener la fecha seleccionada
+            }
+            else if (componente is TextBox tb)
+            {
+                return tb.Text; // Obtener el texto ingresado en el TextBox
+            }
+            else if (componente is Button btn)
+            {
+                return (btn.Text == "Activado") ? "1" : "0"; // Retorna "1" si el botón está activado, "0" si está desactivado
+            }
+
+            return "";
+        }
+
+
         public bool RealizarOperaciones()
         {
             try
             {
                 foreach (var operacion in listaOperaciones)
                 {
-                    // Obtener el valor descriptivo desde el componente del formulario
-                    string valorDescriptivo = ObtenerValorActualizar(operacion.CampoDescriptivo); // Usamos el campo descriptivo
-                    if (string.IsNullOrEmpty(valorDescriptivo))
-                    {
-                        Console.WriteLine("Error: El valor descriptivo no ha sido proporcionado en el componente.");
-                        return false;
-                    }
-
                     // Obtener el valor del campo origen directamente desde el componente del formulario
                     string valorOrigen = ObtenerValorActualizar(operacion.CampoOrigen); // Obtenemos el valor del componente
                     Console.WriteLine($"El valor del componente origen ({operacion.CampoOrigen}) es: " + valorOrigen);
@@ -606,8 +813,18 @@ namespace Capa_Vista_Navegador
                         return false;
                     }
 
+                    // Obtener el valor condicional desde el componente del formulario
+                    string valorCondicional = ObtenerValorActualizar(operacion.ValorCondicional); // Obtenemos el valor del componente condicional
+                    Console.WriteLine($"El valor del componente condicional ({operacion.CampoCondicional}) es: " + valorCondicional);
+
+                    if (string.IsNullOrEmpty(valorCondicional))
+                    {
+                        Console.WriteLine("Error: El valor condicional no ha sido proporcionado en el componente.");
+                        return false;
+                    }
+
                     // Obtener el valor actual del campo destino (por ejemplo, las existencias actuales del producto en el inventario)
-                    string valorDestino = logic.ObtenerValorCampo(operacion.TablaDestino, operacion.CampoDestino, operacion.CampoDescriptivo, valorDescriptivo);
+                    string valorDestino = logic.ObtenerValorCampo(operacion.TablaDestino, operacion.CampoDestino, operacion.CampoCondicional, valorCondicional);
 
                     // Obtener los tipos de datos de los campos origen y destino
                     string tipoCampoOrigen = logic.ObtenerTipoCampo(operacion.TablaOrigen, operacion.CampoOrigen);
@@ -623,14 +840,14 @@ namespace Capa_Vista_Navegador
                     // Convertir los valores a enteros o decimales según corresponda y realizar la operación
                     if (tipoCampoOrigen.Contains("int"))
                     {
-                        if (!RealizarOperacionEnteros(valorOrigen, valorDestino, operacion, valorDescriptivo))
+                        if (!RealizarOperacionEnteros(valorOrigen, valorDestino, operacion, valorCondicional))
                         {
                             return false; // Si alguna operación falla, se detiene el proceso
                         }
                     }
                     else if (tipoCampoOrigen.Contains("decimal"))
                     {
-                        if (!RealizarOperacionDecimales(valorOrigen, valorDestino, operacion, valorDescriptivo))
+                        if (!RealizarOperacionDecimales(valorOrigen, valorDestino, operacion, valorCondicional))
                         {
                             return false; // Si alguna operación falla, se detiene el proceso
                         }
@@ -648,7 +865,8 @@ namespace Capa_Vista_Navegador
             }
         }
 
-        private bool RealizarOperacionEnteros(string valorOrigen, string valorDestino, OperacionCampo operacion, string valordescriptivo)
+
+        private bool RealizarOperacionEnteros(string valorOrigen, string valorDestino, OperacionCampo operacion, string valorCondicional)
         {
             try
             {
@@ -677,8 +895,8 @@ namespace Capa_Vista_Navegador
                         return false;
                 }
 
-                // Actualizar el valor en la tabla destino usando el campo descriptivo
-                logic.ActualizarCampo(operacion.TablaDestino, operacion.CampoDestino, resultadoOperacion.ToString(), operacion.CampoDescriptivo, valordescriptivo);
+                // Actualizar el valor en la tabla destino usando el campo condicional
+                logic.ActualizarCampo(operacion.TablaDestino, operacion.CampoDestino, resultadoOperacion.ToString(), operacion.CampoCondicional, valorCondicional);
 
                 return true;
             }
@@ -689,7 +907,9 @@ namespace Capa_Vista_Navegador
             }
         }
 
-        private bool RealizarOperacionDecimales(string valorOrigen, string valorDestino, OperacionCampo operacion, string valordescriptivo)
+
+
+        private bool RealizarOperacionDecimales(string valorOrigen, string valorDestino, OperacionCampo operacion, string valorCondicional)
         {
             try
             {
@@ -718,8 +938,8 @@ namespace Capa_Vista_Navegador
                         return false;
                 }
 
-                // Actualizar el valor en la tabla destino usando el campo descriptivo
-                logic.ActualizarCampo(operacion.TablaDestino, operacion.CampoDestino, resultadoOperacionDecimal.ToString(), operacion.CampoDescriptivo, valordescriptivo);
+                // Actualizar el valor en la tabla destino usando el campo condicional
+                logic.ActualizarCampo(operacion.TablaDestino, operacion.CampoDestino, resultadoOperacionDecimal.ToString(), operacion.CampoCondicional, valorCondicional);
 
                 return true;
             }
@@ -733,13 +953,13 @@ namespace Capa_Vista_Navegador
 
         private string ObtenerValorActualizar(string campoNombre)
         {
-            // Buscar el componente correspondiente por su nombre (que coincide con el campo de la base de datos)
-            Control componente = this.Controls.Find(campoNombre, true).FirstOrDefault();
+            // Buscar el componente correspondiente por su nombre (primero intenta con 'extra_')
+            Control componente = this.Controls.Find("extra_" + campoNombre, true).FirstOrDefault();
 
-            // Si no se encuentra el componente, intenta buscarlo con el prefijo 'extra_'
+            // Si no se encuentra con 'extra_', intenta con el nombre original
             if (componente == null)
             {
-                componente = this.Controls.Find("extra_" + campoNombre, true).FirstOrDefault();
+                componente = this.Controls.Find(campoNombre, true).FirstOrDefault();
             }
 
             if (componente == null)
@@ -751,8 +971,7 @@ namespace Capa_Vista_Navegador
             // Dependiendo del tipo de componente, obtener su valor
             if (componente is ComboBox cb)
             {
-                // Retorna el valor seleccionado en el ComboBox (ID), si no hay SelectedValue, retorna null
-                return cb.SelectedValue?.ToString();
+                return cb.SelectedValue.ToString();  // Retorna el texto mostrado en el ComboBox
             }
             else if (componente is DateTimePicker dtp)
             {
@@ -769,6 +988,7 @@ namespace Capa_Vista_Navegador
 
             return "";
         }
+
 
 
         // Función para verificar si un valor es numérico
@@ -837,15 +1057,19 @@ namespace Capa_Vista_Navegador
                         if (sLlaves[iIndex] != "MUL")
                         {
                             CrearTextBoxNumerico(nombreComponente, controlPosition);
+                            Console.WriteLine("COMPONENTE NOMBRE: "+ nombreComponente);
                         }
                         else
                         {
                             string tablaRelacionada = logic.DetectarTablaRelacionada(sTablaPrincipal, sCampos[iIndex]);
                             string campoClave = logic.DetectarClaveRelacionada(sTablaPrincipal, sCampos[iIndex]);
+                            string campoDisplay = logic.DetectarCampoDisplayRelacionada(sTablaPrincipal, sCampos[iIndex]);
 
-                            dicItems = logic.Items(tablaRelacionada, campoClave, campoClave);
+                            // Cambiar DataTable por Dictionary
+                            Dictionary<string, string> dicItems = logic.Items(tablaRelacionada, campoClave, campoDisplay);
 
                             CrearComboBox(nombreComponente, controlPosition);
+
                         }
                         break;
 
@@ -855,39 +1079,44 @@ namespace Capa_Vista_Navegador
                         if (sLlaves[iIndex] != "MUL")
                         {
                             CrearTextBoxVarchar(nombreComponente, controlPosition);
+                            Console.WriteLine("COMPONENTE NOMBRE: " + nombreComponente);
                         }
                         else
                         {
                             string tablaRelacionada = logic.DetectarTablaRelacionada(sTablaPrincipal, sCampos[iIndex]);
                             string campoClave = logic.DetectarClaveRelacionada(sTablaPrincipal, sCampos[iIndex]);
+                            string campoDisplay = logic.DetectarCampoDisplayRelacionada(sTablaPrincipal, sCampos[iIndex]);
 
-                            dicItems = logic.Items(tablaRelacionada, campoClave, campoClave);
+                            // Cambiar DataTable por Dictionary
+                            Dictionary<string, string> dicItems = logic.Items(tablaRelacionada, campoClave, campoDisplay);
 
                             CrearComboBox(nombreComponente, controlPosition);
+
                         }
                         break;
 
                     case "date":
                     case "datetime":
                         arrTipoCampos[iIndex] = "Date";
-                        if (sLlaves[iIndex] != "MUL")
+                        if (sLlaves[iIndex] != "MUL" && sLlaves[iIndex] !="PRI")
                         {
                             CrearDateTimePicker(nombreComponente, controlPosition);
+                            Console.WriteLine("COMPONENTE NOMBRE: " + nombreComponente);
                         }
                         else
                         {
-                            string tablaRelacionada = logic.DetectarTablaRelacionada(sTablaPrincipal, sCampos[iIndex]);
-                            string campoClave = logic.DetectarClaveRelacionada(sTablaPrincipal, sCampos[iIndex]);
 
-                            dicItems = logic.Items(tablaRelacionada, campoClave, campoClave);
 
                             CrearComboBox(nombreComponente, controlPosition);
+                            Console.WriteLine("COMPONENTE NOMBRE: " + nombreComponente);
+
                         }
                         break;
 
                     case "time":
                         arrTipoCampos[iIndex] = "Time";
                         CrearCampoHora(nombreComponente, controlPosition);
+                        Console.WriteLine("COMPONENTE NOMBRE: " + nombreComponente);
                         break;
 
                     case "float":
@@ -895,6 +1124,7 @@ namespace Capa_Vista_Navegador
                     case "double":
                         arrTipoCampos[iIndex] = "Decimal";
                         CrearCampoDecimales(nombreComponente, controlPosition);
+                        Console.WriteLine("COMPONENTE NOMBRE: " + nombreComponente);
                         break;
 
                     case "tinyint":
@@ -902,6 +1132,7 @@ namespace Capa_Vista_Navegador
                         if (sLlaves[iIndex] != "MUL")
                         {
                             CrearBotonEstado(nombreComponente, controlPosition);
+                            Console.WriteLine("COMPONENTE NOMBRE: " + nombreComponente);
                         }
                         else
                         {
@@ -1013,10 +1244,16 @@ namespace Capa_Vista_Navegador
                         else
                         {
                             // Es una clave foránea, crear ComboBox
-                            string tablaRelacionada = logic.DetectarTablaRelacionada(tabla, sCampos[i]);
-                            string campoClave = logic.DetectarClaveRelacionada(tabla, sCampos[i]);
-                            dicItems = logic.Items(tablaRelacionada, campoClave, campoClave);
+                            string tablaRelacionada = logic.DetectarTablaRelacionada(tabla, sCampos[iIndex]);
+                            string campoClave = logic.DetectarClaveRelacionada(tabla, sCampos[iIndex]);
+                            string campoDisplay = logic.DetectarCampoDisplayRelacionada(tabla, sCampos[iIndex]);
+                            Console.WriteLine($"Tabla relacionada: {tablaRelacionada}, Campo Clave: {campoClave}, Campo Display: {campoDisplay}");
+                            Console.WriteLine($"Tabla relacionada: {tabla}");
+                            // Cambiar DataTable por Dictionary
+                            Dictionary<string, string> dicItems = logic.Items(tablaRelacionada, campoClave, campoDisplay);
+
                             CrearComboBox(nombreComponente, controlPosition);
+
                         }
                         break;
 
@@ -1029,11 +1266,10 @@ namespace Capa_Vista_Navegador
                         }
                         else
                         {
-                            // Es una clave foránea, crear ComboBox
-                            string tablaRelacionada = logic.DetectarTablaRelacionada(tabla, sCampos[i]);
-                            string campoClave = logic.DetectarClaveRelacionada(tabla, sCampos[i]);
-                            dicItems = logic.Items(tablaRelacionada, campoClave, campoClave);
+                          
+
                             CrearComboBox(nombreComponente, controlPosition);
+
                         }
                         break;
 
@@ -1223,33 +1459,55 @@ namespace Capa_Vista_Navegador
             v.Combobox(e);
         }
 
-        // Este método crea y configura un ComboBox dinámicamente basado en los parámetros y la lógica del sistema.
-        void CrearComboBox(String sNom, Point location)
-        {
-            // Se obtienen los elementos para el ComboBox
-            if (arrTablaCombo[iNumeroCombosAux] != null)
-            {
-                dicItems = logic.Items(arrTablaCombo[iNumeroCombosAux], arrCampoCombo[iNumeroCombosAux], arrCampoDisplayCombo[iNumeroCombosAux]);
-            }
-            if (iNumeroCombos > iNumeroCombosAux) { iNumeroCombosAux++; }
 
-            ComboBox cb = new ComboBox(); // Crea un nuevo ComboBox
+        // Este método crea y configura un ComboBox dinámicamente basado en los parámetros y la lógica del sistema.
+        void CrearComboBox(string sNom, Point location)
+        {
+            ComboBox cb = new ComboBox();
             cb.Width = (int)(cb.Width * 1.2);
             cb.Height = (int)(cb.Height * 1.2);
-            cb.Location = location; // Establece la ubicación del ComboBox
-            cb.Name = sNom; // Establece el nombre del ComboBox
+            cb.Location = location;
+            cb.Name = sNom;
 
-            // Enlaza los datos al ComboBox
-            BindingSource bs = new BindingSource();
-            bs.DataSource = dicItems;
-            cb.DataSource = bs;
-            cb.DisplayMember = "Value"; // Muestra el valor en el ComboBox
-            cb.ValueMember = "Key";     // Almacena la clave seleccionada
+            // Obtener la tabla, campo clave y campo display usando los arreglos de combo
+            if (arrTablaCombo[iNumeroCombosAux] != null)
+            {
+                string tabla = arrTablaCombo[iNumeroCombosAux];
+                string campoClave = arrCampoCombo[iNumeroCombosAux];
+                string campoDisplay = arrCampoDisplayCombo[iNumeroCombosAux];
+                Console.WriteLine($"Tabla relacionada: {tabla}, Campo Clave: {campoClave}, Campo Display: {campoDisplay}");
+                Console.WriteLine($"Tabla relacionada: {tabla}");
+                // Obtener los datos de la lógica del sistema para la tabla y los campos
+                Dictionary<string, string> dicItems = logic.Items(tabla, campoClave, campoDisplay);
 
-            this.Controls.Add(cb); // Añade el ComboBox al formulario
-                                   // iPosicionInicial++; // Ya no es necesario incrementar iPosicionInicial aquí
+                // Si se encuentran datos, asignarlos al ComboBox
+                if (dicItems != null && dicItems.Count > 0)
+                {
+                    BindingSource bs = new BindingSource();
+                    bs.DataSource = dicItems;
+
+                    cb.DataSource = bs;
+                    cb.DisplayMember = "Value";  // Mostrar el campo descriptivo
+                    cb.ValueMember = "Key";      // Usar el campo clave como valor
+                }
+                else
+                {
+                    // Manejar el caso en que no se encuentran datos
+                    Console.WriteLine($"No se encontraron datos para la tabla: {tabla}, clave: {campoClave}, display: {campoDisplay}");
+                }
+
+                // Incrementar el índice de combos
+                if (iNumeroCombos > iNumeroCombosAux) { iNumeroCombosAux++; }
+            }
+            else
+            {
+                // Manejar el caso en que no se encontró la tabla en arrTablaCombo
+                Console.WriteLine($"Error: no se encontró tabla para el combo con nombre: {sNom}");
+            }
+
+            // Añadir el ComboBox al formulario
+            this.Controls.Add(cb);
         }
-
         //******************************************** CODIGO HECHO POR VICTOR CASTELLANOS*****************************
 
         //******************************************** CODIGO HECHO POR BRAYAN HERNANDEZ***************************** 
@@ -1463,7 +1721,7 @@ namespace Capa_Vista_Navegador
                         {
                             sValorCampo = cb.SelectedValue?.ToString() ?? ""; // Asegúrate de que no sea nulo
                         }
-                        else if (componente is Button btn && sNombreCampo == "estado")
+                        else if (componente is Button btn)
                         {
                             // Si el botón define el estado, asigna '0' o '1' según el texto del botón
                             sValorCampo = (btn.Text == "Activado") ? "1" : "0";
@@ -1606,7 +1864,11 @@ namespace Capa_Vista_Navegador
                             {
                                 sValorCampo = componente.Text;
                             }
-
+                            else if (componente is Button btn)
+                            {
+                                // Si el botón define el estado, asigna '0' o '1' según el texto del botón
+                                sValorCampo = (btn.Text == "Activado") ? "1" : "0";
+                            }
                             // Si el valor del campo no está vacío, lo agrega a las cadenas de campos y valores
                             if (!string.IsNullOrEmpty(sValorCampo))
                             {
@@ -1835,7 +2097,7 @@ namespace Capa_Vista_Navegador
             int iAuxLastId = 0;
 
             // Verifica si el primer campo de la tabla principal es de tipo entero y autoincremental
-            if (arrTipos[0] == "int" && arrLlaves[0] == "PRI")
+            if (arrTipos[0].Contains("int") && arrLlaves[0] == "PRI")
             {
                 bTipoInt = true;
                 sAuxId = logic.UltimoID(sTablaPrincipal);
@@ -2749,16 +3011,14 @@ namespace Capa_Vista_Navegador
                 }
 
                 // Verificar las operaciones de campo antes de cualquier inserción
-                if (listaOperaciones.Count > 0)
-                {
                     // Ejecutamos todas las operaciones de la lista de una sola vez
                     if (!RealizarOperaciones())
                     {
                         MessageBox.Show("Error en las operaciones de campos. No se pudo completar una o más operaciones.", "Error de Operación", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return; // Cancelamos si alguna operación no es válida
                     }
-                }
-
+                
+               
 
                 // Lista para almacenar las consultas SQL que se ejecutarán.
                 List<string> lstQueries = new List<string>();

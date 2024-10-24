@@ -40,8 +40,9 @@ namespace Capa_Modelo_Navegador
                     throw new InvalidOperationException("No se pudieron obtener los campos de la tabla principal.");
                 }
 
-                // Inicia con el primer campo de la tabla
-                string sCamposSelect = sTabla + "." + sCamposDesc[0];
+                // Crear alias para la tabla principal
+                string aliasPrincipal = "tc"; // Alias para la tabla principal
+                string sCamposSelect = aliasPrincipal + "." + sCamposDesc[0];
 
                 // Diccionario para evitar duplicados de columnas
                 Dictionary<string, int> dicColumnasRegistradas = new Dictionary<string, int>();
@@ -71,6 +72,8 @@ namespace Capa_Modelo_Navegador
                             throw new ArgumentException("Uno de los valores en las relaciones foráneas es nulo o vacío.");
                         }
 
+                        // Crear alias dinámico para la tabla relacionada
+                        string aliasRelacion = "t" + relacionesForaneas.IndexOf(relacion);
                         string sTablaRelacionada = relacion.Item1;
                         string sCampoDescriptivo = relacion.Item2;
                         string sColumnaForanea = relacion.Item3;
@@ -78,8 +81,11 @@ namespace Capa_Modelo_Navegador
                         // Si la columna actual es una clave foránea, la reemplazamos por su campo descriptivo
                         if (sNombreColumna == sColumnaForanea)
                         {
-                            sCamposSelect += ", " + sTablaRelacionada + "." + sCampoDescriptivo + " AS " + sCampoDescriptivo;
-                            dicColumnasRegistradas[sCampoDescriptivo] = 1;
+                            if (!dicColumnasRegistradas.ContainsKey(sCampoDescriptivo))
+                            {
+                                sCamposSelect += ", " + aliasRelacion + "." + sCampoDescriptivo + " AS " + sCampoDescriptivo;
+                                dicColumnasRegistradas[sCampoDescriptivo] = 1;
+                            }
                             columnaReemplazada = true;
                             break;
                         }
@@ -88,30 +94,34 @@ namespace Capa_Modelo_Navegador
                     // Si no fue reemplazada como clave foránea, agregarla como está
                     if (!columnaReemplazada)
                     {
-                        sCamposSelect += ", " + sTabla + "." + sNombreColumna;
-                        dicColumnasRegistradas[sNombreColumna] = 1;
+                        if (!dicColumnasRegistradas.ContainsKey(sNombreColumna))
+                        {
+                            sCamposSelect += ", " + aliasPrincipal + "." + sNombreColumna;
+                            dicColumnasRegistradas[sNombreColumna] = 1;
+                        }
                     }
                 }
 
-                // Crear el comando SQL para seleccionar los campos
-                string sSql = "SELECT " + sCamposSelect + " FROM " + sTabla;
+                // Crear el comando SQL para seleccionar los campos usando alias
+                string sSql = "SELECT " + sCamposSelect + " FROM " + sTabla + " AS " + aliasPrincipal;
 
-                // Agregar los LEFT JOIN para cada relación foránea
+                // Agregar los LEFT JOIN para cada relación foránea usando alias
                 foreach (var relacion in relacionesForaneas)
                 {
+                    string aliasRelacion = "t" + relacionesForaneas.IndexOf(relacion); // Alias para la tabla relacionada
                     string sTablaRelacionada = relacion.Item1;
                     string sColumnaForanea = relacion.Item3;
                     string sColumnaPrimariaRelacionada = relacion.Item4;
 
-                    // Añadir el LEFT JOIN con la tabla relacionada
-                    sSql += " LEFT JOIN " + sTablaRelacionada + " ON " + sTabla + "." + sColumnaForanea + " = " + sTablaRelacionada + "." + sColumnaPrimariaRelacionada;
+                    // Añadir el LEFT JOIN con la tabla relacionada usando alias
+                    sSql += " LEFT JOIN " + sTablaRelacionada + " AS " + aliasRelacion + " ON " + aliasPrincipal + "." + sColumnaForanea + " = " + aliasRelacion + "." + sColumnaPrimariaRelacionada;
                 }
 
                 // Filtrar por estado (activo o inactivo)
-                sSql += " WHERE " + sTabla + ".estado = 0 OR " + sTabla + ".estado = 1";
+                sSql += " WHERE " + aliasPrincipal + ".estado = 0 OR " + aliasPrincipal + ".estado = 1";
 
                 // Ordenar por la columna principal en orden descendente
-                sSql += " ORDER BY " + sCamposDesc[0] + " DESC;";
+                sSql += " ORDER BY " + aliasPrincipal + "." + sCamposDesc[0] + " DESC;";
 
                 Console.WriteLine(sSql); // Imprimir la consulta SQL generada para debugging
 
@@ -119,6 +129,12 @@ namespace Capa_Modelo_Navegador
                 OdbcDataAdapter dataTable = new OdbcDataAdapter(sSql, conn);
 
                 return dataTable;
+            }
+            catch (Exception ex)
+            {
+                // Capturar detalles del error y volver a lanzar la excepción
+                Console.WriteLine("Ocurrió un error al llenar la tabla: " + ex.Message);
+                throw;
             }
             finally
             {
@@ -624,23 +640,54 @@ namespace Capa_Modelo_Navegador
         // Método para obtener los ítems de un ComboBox desde la base de datos
         public Dictionary<string, string> ObtenerItems(string sTabla, string sCampoClave, string sCampoDisplay)
         {
-            Dictionary<string, string> dicItems = new Dictionary<string, string>();
+            Dictionary<string, string> items = new Dictionary<string, string>();
+
             try
             {
-                OdbcCommand command = new OdbcCommand($"SELECT {sCampoClave}, {sCampoDisplay} FROM {sTabla} WHERE estado = 1", cn.ProbarConexion());
-                OdbcDataReader reader = command.ExecuteReader();
-
-                while (reader.Read())
+                using (OdbcConnection connection = cn.ProbarConexion())
                 {
-                    dicItems.Add(reader.GetValue(0).ToString(), reader.GetValue(1).ToString());
+                    // Validar si las columnas existen en la tabla
+                    DataTable schemaTable = connection.GetSchema("Columns", new string[] { null, null, sTabla, null });
+                    bool columnClaveExists = schemaTable.AsEnumerable().Any(row => row["COLUMN_NAME"].ToString() == sCampoClave);
+                    bool columnDisplayExists = schemaTable.AsEnumerable().Any(row => row["COLUMN_NAME"].ToString() == sCampoDisplay);
+                    Console.WriteLine($"Columna Clave Existe: {columnClaveExists}, Columna Display Existe: {columnDisplayExists}");
+
+                    if (!columnClaveExists || !columnDisplayExists)
+                    {
+                        throw new Exception("El campo clave o el campo display no existen en la tabla.");
+                    }
+
+                    foreach (DataRow row in schemaTable.Rows)
+                    {
+                        Console.WriteLine(row["COLUMN_NAME"].ToString());
+                    }
+
+                    // Ejecutar la consulta
+                    string query = $"SELECT {sCampoClave} AS KeyField, {sCampoDisplay} AS DisplayField FROM {sTabla} WHERE estado = 1";
+                    Console.WriteLine("Query: " + query);
+
+                    OdbcCommand command = new OdbcCommand(query, connection);
+                    OdbcDataReader reader = command.ExecuteReader();
+
+                    // Llenar el diccionario con los resultados
+                    while (reader.Read())
+                    {
+                        string key = reader["KeyField"].ToString();
+                        string value = reader["DisplayField"].ToString();
+
+                        // Agregar los valores al diccionario
+                        items.Add(key, value);
+                    }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message + " \nError en obtenerItems, revise los parámetros \n -" + sTabla + "\n -" + sCampoClave);
+                Console.WriteLine($"Error: {ex.Message}\nStack Trace: {ex.StackTrace}");
             }
-            return dicItems;
+
+            return items;
         }
+
         //******************************************** CODIGO HECHO POR JOSUE CACAO ***************************** 
 
 
@@ -832,34 +879,80 @@ namespace Capa_Modelo_Navegador
         // Asumiendo que tienes una clase para la conexión
 
         // Método para obtener las relaciones de claves foráneas desde la base de datos
+
+        public string ObtenerCampoDisplay(string tablaRelacionada)
+        {
+            string campoDisplay = null;
+
+            try
+            {
+                using (OdbcConnection connection = cn.ProbarConexion())
+                {
+                    // Consulta para encontrar columnas que probablemente sean descriptivas
+                    string sQuery = $@"
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = '{tablaRelacionada}' 
+            AND (COLUMN_NAME LIKE '%nombre%' OR COLUMN_NAME LIKE '%descripcion%' OR COLUMN_NAME LIKE '%titulo%' OR COLUMN_NAME LIKE '%detalle%');";
+
+                    OdbcCommand command = new OdbcCommand(sQuery, connection);
+                    OdbcDataReader reader = command.ExecuteReader();
+
+                    if (reader.Read())
+                    {
+                        campoDisplay = reader.GetString(0);  // Toma el primer resultado como campo display
+                        Console.WriteLine($"Campo descriptivo encontrado en {tablaRelacionada}: {campoDisplay}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"No se encontró un campo descriptivo en {tablaRelacionada}. Usando la clave primaria.");
+                    }
+
+                    reader.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al obtener el campo display: {ex.Message}");
+            }
+
+            return campoDisplay;
+        }
+
         public (string tablaRelacionada, string campoClave, string campoDisplay) ObtenerRelacionesForaneas(string sTablaOrigen, string sCampo)
         {
             string tablaRelacionada = null;
             string campoClave = null;
+            string campoDisplay = null;
 
             try
             {
                 string sQuery = $@"
-                SELECT REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME 
-                FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
-                WHERE TABLE_SCHEMA = DATABASE()
-                AND TABLE_NAME = '{sTablaOrigen}' 
-                AND COLUMN_NAME = '{sCampo}';";
+        SELECT REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
+        WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = '{sTablaOrigen}' 
+        AND COLUMN_NAME = '{sCampo}';";
 
                 OdbcCommand command = new OdbcCommand(sQuery, cn.ProbarConexion());
                 OdbcDataReader reader = command.ExecuteReader();
 
                 if (reader.Read())
                 {
-                    tablaRelacionada = reader.GetString(0);  // Obtiene la tabla relacionada
-                    campoClave = reader.GetString(1);        // Obtiene la clave relacionada (ID)
+                    tablaRelacionada = reader.GetString(0);  // Tabla relacionada
+                    campoClave = reader.GetString(1);        // Clave relacionada (ID)
 
                     Console.WriteLine($"Clave foránea de {sTablaOrigen} que referencia a {tablaRelacionada}: {campoClave}");
 
-                    // El campo display ahora es siempre el campo clave (ID)
-                    string campoDisplay = campoClave;
+                    // Usar la nueva función para obtener el campo display
+                    campoDisplay = ObtenerCampoDisplay(tablaRelacionada);
 
-                    return (tablaRelacionada, campoClave, campoDisplay);
+                    // Si no se encontró un campo display, usar la clave
+                    if (string.IsNullOrEmpty(campoDisplay))
+                    {
+                        campoDisplay = campoClave;
+                    }
                 }
                 else
                 {
@@ -873,7 +966,7 @@ namespace Capa_Modelo_Navegador
                 Console.WriteLine("Error al obtener clave foránea: " + ex.Message);
             }
 
-            return (tablaRelacionada, campoClave, campoClave); // Ambos campoClave y campoDisplay serán el ID
+            return (tablaRelacionada, campoClave, campoDisplay);
         }
 
 
@@ -947,6 +1040,7 @@ namespace Capa_Modelo_Navegador
             {
                 // Ajustamos la consulta para que busque en base a la clave primaria específica
                 string query = $"SELECT {campo} FROM {tabla} WHERE {clavePrimaria} = {valorClavePrimaria} AND estado = 1 LIMIT 1;";
+
                 OdbcCommand command = new OdbcCommand(query, cn.ProbarConexion());
                 OdbcDataReader reader = command.ExecuteReader();
 
@@ -964,12 +1058,12 @@ namespace Capa_Modelo_Navegador
         }
 
 
-        public void ActualizarCampo(string tabla, string campo, string nuevoValor, string clavePrimaria, string valorClavePrimaria)
+        public void ActualizarCampo(string tabla, string campo, string nuevoValor, string claveCondicional, string valorCondicional)
         {
             try
             {
-                // Construir la consulta UPDATE usando la clave primaria para identificar el registro correcto
-                string query = $"UPDATE {tabla} SET {campo} = {nuevoValor} WHERE {clavePrimaria} = {valorClavePrimaria} AND estado = 1;";
+                // Construir la consulta UPDATE usando la clave condicional para identificar el registro correcto
+                string query = $"UPDATE {tabla} SET {campo} = {nuevoValor} WHERE {claveCondicional} = {valorCondicional} AND estado = 1;";
 
                 // Ejecutar la consulta
                 using (OdbcCommand command = new OdbcCommand(query, cn.ProbarConexion()))
@@ -985,6 +1079,7 @@ namespace Capa_Modelo_Navegador
                 Console.WriteLine("Error al actualizar el campo: " + ex.Message);
             }
         }
+
 
 
 

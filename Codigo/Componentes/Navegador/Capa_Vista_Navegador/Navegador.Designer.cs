@@ -59,11 +59,7 @@
             // 
             this.Dgv_Informacion.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
             this.Dgv_Informacion.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-
-            this.Dgv_Informacion.Location = new System.Drawing.Point(28, 664);
-
             this.Dgv_Informacion.Location = new System.Drawing.Point(28, 637);
-
             this.Dgv_Informacion.Margin = new System.Windows.Forms.Padding(4);
             this.Dgv_Informacion.Name = "Dgv_Informacion";
             this.Dgv_Informacion.ReadOnly = true;
@@ -171,7 +167,7 @@
             // 
             // Btn_Imprimir
             // 
-            this.Btn_Imprimir.BackColor = System.Drawing.Color.White;
+            this.Btn_Imprimir.BackColor = System.Drawing.Color.DimGray;
             this.Btn_Imprimir.Dock = System.Windows.Forms.DockStyle.Fill;
             this.Btn_Imprimir.Enabled = false;
             this.Btn_Imprimir.FlatAppearance.BorderColor = System.Drawing.Color.LightGray;
@@ -452,11 +448,7 @@
             this.Controls.Add(this.Dgv_Informacion);
             this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "Navegador";
-
-            this.Size = new System.Drawing.Size(1123, 906);
-
             this.Size = new System.Drawing.Size(1123, 900);
-
             this.Load += new System.EventHandler(this.Navegador_Load);
             ((System.ComponentModel.ISupportInitialize)(this.Dgv_Informacion)).EndInit();
             this.Tlp_Panel2.ResumeLayout(false);

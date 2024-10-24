@@ -1,7 +1,7 @@
 ﻿
 namespace ejecucionNav
 {
-    partial class compras
+    partial class pruebaboton
     {
         /// <summary>
         /// Required designer variable.
@@ -39,19 +39,17 @@ namespace ejecucionNav
             this.navegador1.Location = new System.Drawing.Point(0, 0);
             this.navegador1.Margin = new System.Windows.Forms.Padding(4);
             this.navegador1.Name = "navegador1";
-            this.navegador1.Size = new System.Drawing.Size(1113, 830);
+            this.navegador1.Size = new System.Drawing.Size(1134, 913);
             this.navegador1.TabIndex = 0;
             // 
-            // compras
+            // pruebaboton
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1113, 830);
+            this.ClientSize = new System.Drawing.Size(1134, 913);
             this.Controls.Add(this.navegador1);
-            this.Name = "compras";
-            this.Text = "compras";
-            this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
-            this.Load += new System.EventHandler(this.compras_Load);
+            this.Name = "pruebaboton";
+            this.Text = "pruebaboton";
             this.ResumeLayout(false);
 
         }
