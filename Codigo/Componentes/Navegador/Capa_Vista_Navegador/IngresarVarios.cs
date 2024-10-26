@@ -13,9 +13,16 @@ namespace Capa_Vista_Navegador
     public partial class IngresarVarios : UserControl
     {
         public Navegador ComponentePrincipal { get; set; }
+
+
+
+
+
+
         public IngresarVarios()
         {
             InitializeComponent();
+
         }
 
         public string TablaVarios { get; private set; }
@@ -110,6 +117,10 @@ namespace Capa_Vista_Navegador
                         {
                             valoresComponentesExtras[nombreCampo] = dateTimePicker.Value;
                         }
+                        else if (control is Button btn)
+                        {
+                            valoresComponentesExtras[nombreCampo] = (btn.Text == "Activado") ? "1" : "0"; // Retorna "1" si el botón está activado, "0" si está desactivado
+                        }
                     }
                 }
 
@@ -198,6 +209,11 @@ namespace Capa_Vista_Navegador
             {
                 MessageBox.Show("Por favor, selecciona una fila para eliminar.");
             }
+        }
+
+        private void IngresarVarios_Load(object sender, EventArgs e)
+        {
+
         }
     }
 }

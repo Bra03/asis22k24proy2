@@ -47,7 +47,7 @@ namespace ejecucionNav
             
             navegador1.AsignarTablas(tablas);
 
-            string[] aliasfacturadetalle = { "INVCODIGO", "FACDCANTIDAD", "FACDPRECIO" };
+            string[] aliasfacturadetalle = { "INVCODIGO", "FACDCANTIDAD", "FACDPRECIO","estado" };
             navegador1.AsignarAliasExtras("facturad", aliasfacturadetalle);
             List<string> tablascomponentes = new List<string> { "facturad" };
             navegador1.AsignarTablaComponentes(tablascomponentes);

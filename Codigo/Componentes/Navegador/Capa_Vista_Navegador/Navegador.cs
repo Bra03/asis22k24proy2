@@ -1887,7 +1887,17 @@ namespace Capa_Vista_Navegador
                     if (dgvProductos.Columns.Contains(nombreColumna))
                     {
                         DataGridViewCell celda = fila.Cells[nombreColumna];
-                        string sValorCampo = celda?.Value?.ToString() ?? "";
+                        string sValorCampo = "";
+
+                        if (esTinyInt && celda is DataGridViewButtonCell)
+                        {
+                            // Asigna "1" para activado y "0" para desactivado
+                            sValorCampo = (celda.Style.BackColor == Color.Green) ? "1" : "0";
+                        }
+                        else
+                        {
+                            sValorCampo = celda?.Value?.ToString() ?? "";
+                        }
 
                         if (!string.IsNullOrEmpty(sValorCampo))
                         {
@@ -1942,6 +1952,11 @@ namespace Capa_Vista_Navegador
                         sValorCampo = comboBox.SelectedValue?.ToString() ?? "";
                     else if (control is DateTimePicker dateTimePicker)
                         sValorCampo = dateTimePicker.Value.ToString("yyyy-MM-dd");
+                    else if (control is Button button && esTinyInt) // Detecta si el control es un botón y es tinyint
+                    {
+                        // Asigna "1" si el botón está verde (activado) y "0" si está rojo (desactivado)
+                        sValorCampo = (button.BackColor == Color.Green) ? "1" : "0";
+                    }
 
                     if (!string.IsNullOrEmpty(sValorCampo))
                     {
@@ -2212,6 +2227,14 @@ namespace Capa_Vista_Navegador
                     componente.Enabled = true;
                     componente.Text = "";
                 }
+            }
+            if (IngresarVariosControl != null)
+            {
+                IngresarVariosControl.Btn_agregar.Enabled = true;
+                IngresarVariosControl.Btn_quitar.Enabled = true;
+
+                IngresarVariosControl.DataGridViewInformacionExtra.Enabled = false;
+                IngresarVariosControl.DataGridViewInformacionExtra.Rows.Clear();
             }
 
             Btn_Ingresar.Enabled = false;
@@ -3363,75 +3386,86 @@ namespace Capa_Vista_Navegador
         {
             Console.WriteLine($"Procesando tablas adicionales para la clave primaria: {primaryKeyValue}");
 
-            // Iterar sobre las tablas adicionales relacionadas
             foreach (string tabla in lstTablasAdicionales)
             {
                 Console.WriteLine($"Procesando tabla: {tabla}");
 
-                // Verificar si hay alias definidos para esta tabla
                 if (!aliasPorTabla.ContainsKey(tabla))
                 {
                     MessageBox.Show($"No hay alias definidos para la tabla: {tabla}");
-                    Console.WriteLine($"No hay alias definidos para la tabla: {tabla}");
                     continue;
                 }
 
-                // Obtener los alias (campos extras) de la tabla actual
                 string[] alias = aliasPorTabla[tabla];
                 Console.WriteLine($"Alias encontrados para la tabla {tabla}: {string.Join(", ", alias)}");
 
-                // Realizar la consulta a la tabla relacionada utilizando la clave primaria
-                Dictionary<string, string> datosExtra = logic.ObtenerDatosExtra(tabla, primaryKeyValue, sTablaPrincipal);
-                Console.WriteLine($"Datos obtenidos de {tabla}: {datosExtra?.Count} registros.");
+                // Realizar la consulta a la tabla relacionada utilizando la clave primaria y obtener todos los registros
+                List<Dictionary<string, string>> listaDatosExtra = logic.ObtenerDatosExtra(tabla, primaryKeyValue, sTablaPrincipal);
+                Console.WriteLine($"Datos obtenidos de {tabla}: {listaDatosExtra?.Count} registros.");
 
-                if (datosExtra != null && datosExtra.Count > 0)
+                // Limpiar la DataGridView antes de asignar nuevos datos
+                if (IngresarVariosControl != null && IngresarVariosControl.DataGridViewInformacionExtra != null)
                 {
+                    var dataGridView = IngresarVariosControl.DataGridViewInformacionExtra;
+                    dataGridView.Rows.Clear(); // Limpia las filas existentes
+
+                    // Si no se obtuvieron datos, asegurarse de que la DataGridView quede vacía y continuar con la siguiente tabla
+                    if (listaDatosExtra == null || listaDatosExtra.Count == 0)
+                    {
+                        Console.WriteLine($"No se obtuvieron datos para la tabla {tabla}. La DataGridView quedará vacía.");
+                        continue;
+                    }
+
+                    // Añadir filas solo si hay datos en listaDatosExtra
+                    foreach (var datosExtra in listaDatosExtra)
+                    {
+                        int rowIndex = dataGridView.Rows.Add();
+                        DataGridViewRow row = dataGridView.Rows[rowIndex];
+
+                        foreach (string columna in alias)
+                        {
+                            if (datosExtra.ContainsKey(columna))
+                            {
+                                row.Cells[columna].Value = datosExtra[columna];
+                            }
+                        }
+                    }
+                }
+
+                // Asignación a controles individuales (usando el primer registro solo como ejemplo)
+                if (listaDatosExtra != null && listaDatosExtra.Count > 0)
+                {
+                    var datosPrimerRegistro = listaDatosExtra[0];
                     foreach (Control componente in Controls)
                     {
-                        // Asignar los valores a los controles que tienen un alias relacionado
                         if (componente.Name.StartsWith("extra_"))
                         {
                             string nombreCampo = componente.Name.Replace("extra_", "");
                             Console.WriteLine($"Verificando componente {componente.Name} para el campo {nombreCampo}");
 
-                            // Verificar si el campo está en los alias extras definidos
-                            if (alias.Contains(nombreCampo) && datosExtra.ContainsKey(nombreCampo))
+                            if (alias.Contains(nombreCampo) && datosPrimerRegistro.ContainsKey(nombreCampo))
                             {
                                 if (componente is TextBox || componente is DateTimePicker || componente is ComboBox)
                                 {
-                                    Console.WriteLine($"Asignando valor al componente: {componente.Name}, Valor: {datosExtra[nombreCampo]}");
-                                    componente.Text = datosExtra[nombreCampo]; // Asignar el valor al componente extra
+                                    componente.Text = datosPrimerRegistro[nombreCampo];
                                 }
-                                else if (componente is Button) // Verificamos si el componente es un botón
+                                else if (componente is Button)
                                 {
-                                    string valor = datosExtra[nombreCampo];
-                                    Console.WriteLine($"Asignando valor al botón {componente.Name}: {valor}");
-
-                                    // Cambiar el estado del botón según el valor (1 o 0)
+                                    string valor = datosPrimerRegistro[nombreCampo];
                                     if (valor == "1")
                                     {
                                         componente.Text = "Activado";
                                         componente.BackColor = Color.Green;
-                                        Console.WriteLine($"Botón {componente.Name} activado (verde).");
                                     }
                                     else if (valor == "0")
                                     {
                                         componente.Text = "Desactivado";
                                         componente.BackColor = Color.Red;
-                                        Console.WriteLine($"Botón {componente.Name} desactivado (rojo).");
                                     }
                                 }
                             }
-                            else
-                            {
-                                Console.WriteLine($"Alias o datos no encontrados para el campo: {nombreCampo}");
-                            }
                         }
                     }
-                }
-                else
-                {
-                    Console.WriteLine($"No se obtuvieron datos para la tabla {tabla}.");
                 }
             }
         }

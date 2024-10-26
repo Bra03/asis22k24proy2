@@ -42,12 +42,12 @@ namespace Capa_Vista_Navegador
             this.Dgv_InfoExtra.Name = "Dgv_InfoExtra";
             this.Dgv_InfoExtra.RowHeadersWidth = 51;
             this.Dgv_InfoExtra.RowTemplate.Height = 24;
-            this.Dgv_InfoExtra.Size = new System.Drawing.Size(740, 243);
+            this.Dgv_InfoExtra.Size = new System.Drawing.Size(801, 243);
             this.Dgv_InfoExtra.TabIndex = 0;
             // 
             // Btn_agregar
             // 
-            this.Btn_agregar.Location = new System.Drawing.Point(746, 0);
+            this.Btn_agregar.Location = new System.Drawing.Point(807, 14);
             this.Btn_agregar.Name = "Btn_agregar";
             this.Btn_agregar.Size = new System.Drawing.Size(76, 68);
             this.Btn_agregar.TabIndex = 1;
@@ -57,7 +57,7 @@ namespace Capa_Vista_Navegador
             // 
             // Btn_quitar
             // 
-            this.Btn_quitar.Location = new System.Drawing.Point(746, 149);
+            this.Btn_quitar.Location = new System.Drawing.Point(807, 150);
             this.Btn_quitar.Name = "Btn_quitar";
             this.Btn_quitar.Size = new System.Drawing.Size(76, 68);
             this.Btn_quitar.TabIndex = 2;
@@ -74,7 +74,8 @@ namespace Capa_Vista_Navegador
             this.Controls.Add(this.Btn_agregar);
             this.Controls.Add(this.Dgv_InfoExtra);
             this.Name = "IngresarVarios";
-            this.Size = new System.Drawing.Size(834, 265);
+            this.Size = new System.Drawing.Size(893, 265);
+            this.Load += new System.EventHandler(this.IngresarVarios_Load);
             ((System.ComponentModel.ISupportInitialize)(this.Dgv_InfoExtra)).EndInit();
             this.ResumeLayout(false);
 
@@ -83,7 +84,7 @@ namespace Capa_Vista_Navegador
         #endregion
 
         private System.Windows.Forms.DataGridView Dgv_InfoExtra;
-        private System.Windows.Forms.Button Btn_agregar;
-        private System.Windows.Forms.Button Btn_quitar;
+        public System.Windows.Forms.Button Btn_agregar;
+        public System.Windows.Forms.Button Btn_quitar;
     }
 }

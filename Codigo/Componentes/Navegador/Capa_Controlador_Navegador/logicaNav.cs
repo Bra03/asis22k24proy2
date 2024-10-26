@@ -219,10 +219,10 @@ namespace Capa_Controlador_Navegador
             return table;
         }
 
-        public Dictionary<string, string> ObtenerDatosExtra(string tabla, string primaryKeyValue, string tablaprincipal)
+        public List<Dictionary<string, string>> ObtenerDatosExtra(string tabla, string primaryKeyValue, string tablaPrincipal)
         {
             // Llamar a la capa Modelo para obtener los datos de la tabla relacionada
-            return sn.ObtenerDatosTablaRelacionada(tabla, primaryKeyValue, tablaprincipal);
+            return sn.ObtenerDatosTablaRelacionada(tabla, primaryKeyValue, tablaPrincipal);
         }
 
         public string ObtenerValorCampo(string tabla, string campo, string clavePrimaria, string valorClavePrimaria)

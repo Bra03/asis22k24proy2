@@ -980,57 +980,42 @@ namespace Capa_Modelo_Navegador
         //******************************************** CODIGO HECHO POR VICTOR CASTELLANOS ***************************** 
 
         //******************************************** CODIGO HECHO POR BRAYAN HERNANDEZ ***************************** 
-        public Dictionary<string, string> ObtenerDatosTablaRelacionada(string tabla, string primaryKeyValue, string tablaPrincipal)
+        public List<Dictionary<string, string>> ObtenerDatosTablaRelacionada(string tabla, string primaryKeyValue, string tablaPrincipal)
         {
-            Dictionary<string, string> datosExtra = new Dictionary<string, string>();
+            List<Dictionary<string, string>> listaDatosExtra = new List<Dictionary<string, string>>();
 
-            // Detectar la tabla relacionada y su clave foránea
-            string claveForanea = ObtenerClaveForanea(tabla, tablaPrincipal); // tablaPrincipal es la tabla maestra
-
+            string claveForanea = ObtenerClaveForanea(tabla, tablaPrincipal);
             if (string.IsNullOrEmpty(claveForanea))
             {
                 Console.WriteLine($"No se encontró clave foránea para la tabla {tabla} con la tabla principal {tablaPrincipal}");
-                return datosExtra;
+                return listaDatosExtra;
             }
 
-            // Mostrar información sobre la clave foránea y la consulta SQL que se va a ejecutar
-            Console.WriteLine($"Clave foránea detectada: {claveForanea} para la tabla {tabla}, Clave primaria: {primaryKeyValue}");
-
-            // Generar la consulta SQL
             string consultaSQL = $"SELECT * FROM {tabla} WHERE {claveForanea} = ?";
-            Console.WriteLine($"Consulta SQL generada: {consultaSQL}");
-
-            // Crear la consulta SQL utilizando la clave foránea detectada
             using (var connection = cn.ProbarConexion())
             {
                 using (OdbcCommand command = new OdbcCommand(consultaSQL, connection))
                 {
-                    // No usar el nombre del parámetro en ODBC, solo el valor en el orden correcto
                     command.Parameters.AddWithValue("", primaryKeyValue);
-                    Console.WriteLine($"Valor de primaryKeyValue: {primaryKeyValue}");
 
                     using (OdbcDataReader reader = command.ExecuteReader())
                     {
-                        if (reader.Read())
+                        while (reader.Read())
                         {
-                            Console.WriteLine("Datos obtenidos del lector de la base de datos:");
+                            Dictionary<string, string> datosExtra = new Dictionary<string, string>();
                             for (int i = 0; i < reader.FieldCount; i++)
                             {
                                 string nombreCampo = reader.GetName(i);
                                 string valorCampo = reader[i].ToString();
                                 datosExtra[nombreCampo] = valorCampo;
-                                Console.WriteLine($"{nombreCampo}: {valorCampo}");
                             }
-                        }
-                        else
-                        {
-                            Console.WriteLine($"No se encontraron registros en la tabla {tabla} para {claveForanea} = {primaryKeyValue}");
+                            listaDatosExtra.Add(datosExtra);
                         }
                     }
                 }
             }
 
-            return datosExtra;
+            return listaDatosExtra;
         }
 
         public string ObtenerValorCampo(string tabla, string campo, string clavePrimaria, string valorClavePrimaria)
