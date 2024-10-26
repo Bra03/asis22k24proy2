@@ -39,14 +39,14 @@ namespace ejecucionNav
             this.navegador1.Location = new System.Drawing.Point(0, 0);
             this.navegador1.Margin = new System.Windows.Forms.Padding(4);
             this.navegador1.Name = "navegador1";
-            this.navegador1.Size = new System.Drawing.Size(1112, 915);
+            this.navegador1.Size = new System.Drawing.Size(1943, 976);
             this.navegador1.TabIndex = 0;
             // 
             // ejemplooperacion
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1112, 915);
+            this.ClientSize = new System.Drawing.Size(1943, 976);
             this.Controls.Add(this.navegador1);
             this.Name = "ejemplooperacion";
             this.Text = "ejemplooperacion";

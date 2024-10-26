@@ -89,6 +89,9 @@ namespace Capa_Vista_Navegador
         Dictionary<string, List<string>> diccionarioTablasAsociativas = new Dictionary<string, List<string>>();
         // Declaración del diccionario para almacenar las tablas asociativas
         List<string> lstTablasParaComponentes = new List<string>();
+        private IngresarVarios IngresarVariosControl;
+        private bool activarIngresarVarios;
+        private string nombreTablaVarios;
 
 
 
@@ -124,6 +127,8 @@ namespace Capa_Vista_Navegador
             tpAyuda.SetToolTip(Btn_Imprimir, "Mostrar un Reporte");
             tpAyuda.SetToolTip(Btn_AyudaBox, "Asignar Documento de Ayuda");
             tpAyuda.SetToolTip(Btn_Reportes_Principal, "Mostrar un Reporte");
+
+           
         }
 
 
@@ -133,6 +138,19 @@ namespace Capa_Vista_Navegador
             colorDialog1.Color = cNuevoColorFondo;
             this.BackColor = colorDialog1.Color;
             BotonesYPermisos();
+            if (activarIngresarVarios)
+            {
+                IngresarVariosControl = new IngresarVarios();
+                IngresarVariosControl.ComponentePrincipal = this; // Referencia al componente principal
+                IngresarVariosControl.Location = new System.Drawing.Point(850, 515); // Ubicación personalizada
+                this.Controls.Add(IngresarVariosControl);
+                IngresarVariosControl.Visible = true;
+                if (!string.IsNullOrEmpty(nombreTablaVarios))
+                {
+                    IngresarVariosControl.ConfigurarDataGridViewParaTablaVarios(nombreTablaVarios);
+                }
+                Console.WriteLine("IngresarVariosControl fue inicializado con la tabla: " + nombreTablaVarios);
+            }
 
             if (sTablaPrincipal != "def")
             {
@@ -162,7 +180,7 @@ namespace Capa_Vista_Navegador
                                 }
 
                                 CreaComponentes();
-                                //MessageBox.Show("hola");
+                                MessageBox.Show("hola");
 
                                 // Crear componentes de las tablas adicionales
                                 if (lstTablasParaComponentes != null)
@@ -332,6 +350,18 @@ namespace Capa_Vista_Navegador
             // Añadir la relación foránea a la lista
             relacionesForaneas.Add(new Tuple<string, string, string, string>(sTablaRela, sCampoDescri, sColumnaFora, sColumnaPrimariaRelaciona));
         }
+        public void AsignarVarios(bool activar)
+        {
+            activarIngresarVarios = activar; // Solo cambia el estado de la variable
+        }
+
+        public void AsignarTablaVarios(string nombreTabla)
+        {
+            nombreTablaVarios = nombreTabla;
+            Console.WriteLine("Nombre de la tabla almacenado: " + nombreTabla);
+        }
+
+
 
 
         //******************************************** CODIGO HECHO POR DIEGO MARROQUIN ***************************** 
@@ -1171,6 +1201,23 @@ namespace Capa_Vista_Navegador
             // Obtener los alias de los campos para esta tabla
             string[] alias = aliasPorTabla[tabla];
 
+            // Solo accede y configura la DataGridView de IngresarVarios si activarIngresarVarios es true
+            if (activarIngresarVarios)
+            {
+                // Accede a la DataGridView del UserControl IngresarVarios
+                DataGridView dgvExtras = IngresarVariosControl.DataGridViewInformacionExtra;
+
+                // Agregar columnas a la DataGridView si no existen ya
+                if (dgvExtras.Columns.Count == 0)
+                {
+                    foreach (string aliasCampo in alias)
+                    {
+                        // Añadir columnas con los nombres de los alias
+                        dgvExtras.Columns.Add(aliasCampo, aliasCampo);
+                    }
+                }
+            }
+            // El resto del código para crear los componentes y etiquetas
             int iIndex = 0;
             int desplazamientoY = 60;  // Espacio vertical entre controles
             int desplazamientoX = 200; // Espacio horizontal entre columnas
@@ -1196,7 +1243,6 @@ namespace Capa_Vista_Navegador
             for (int i = 0; i < sCampos.Length; i++)
             {
                 // Verificar si el campo es autoincremental o clave primaria
-             
 
                 // Buscar si el campo actual tiene un alias asignado en la lista de alias
                 string aliasActual = alias.FirstOrDefault(a => a == sCampos[i]);
@@ -1253,7 +1299,6 @@ namespace Capa_Vista_Navegador
                             Dictionary<string, string> dicItems = logic.Items(tablaRelacionada, campoClave, campoDisplay);
 
                             CrearComboBox(nombreComponente, controlPosition);
-
                         }
                         break;
 
@@ -1266,10 +1311,7 @@ namespace Capa_Vista_Navegador
                         }
                         else
                         {
-                          
-
                             CrearComboBox(nombreComponente, controlPosition);
-
                         }
                         break;
 
@@ -1531,9 +1573,18 @@ namespace Capa_Vista_Navegador
             {
                 if (componente is TextBox || componente is DateTimePicker || componente is ComboBox || componente is Button)
                 {
-                    componente.Enabled = false; // De esta manera bloqueamos todos los TextBox, DateTimePicker y ComboBox
+                    componente.Enabled = false; // Deshabilitar todos los TextBox, DateTimePicker, ComboBox y Button
                 }
             }
+
+            // Limpiar y deshabilitar específicamente la DataGridView extra, si existe
+            if (IngresarVariosControl != null && IngresarVariosControl.DataGridViewInformacionExtra != null)
+            {
+                IngresarVariosControl.DataGridViewInformacionExtra.Enabled = false;
+                IngresarVariosControl.DataGridViewInformacionExtra.Rows.Clear(); // Limpiar filas solo de la DataGridView extra
+            }
+
+            // Deshabilitar botones específicos
             Btn_Modificar.Enabled = false;
             Btn_Eliminar.Enabled = false;
             Btn_Guardar.Enabled = false;
@@ -1681,10 +1732,6 @@ namespace Capa_Vista_Navegador
             // Retornar la consulta construida.
             return sQuery;
         }
-
-        //******************************************** CODIGO HECHO POR MATY MANCILLA*****************************
-
-        //******************************************** CODIGO HECHO POR JOEL LOPEZ***************************** 
         string CrearInsert(string sNombreTabla)
         {
             // Inicializa las cadenas para la consulta INSERT y los valores a insertar
@@ -1812,87 +1859,112 @@ namespace Capa_Vista_Navegador
         }
 
 
-        string CrearInsertParaTablasExtras(string sNombreTabla, string idForaneo)
+        List<string> CrearInsertDesdeDataGridView(string sNombreTabla, string idForaneo, DataGridView dgvProductos)
         {
-            string sQuery = "INSERT INTO " + sNombreTabla + " (";
-            string sValores = "VALUES (";
-
-            int iPosicionCampo = 0;
-            string sCampos = "";
-            string sValoresCampos = "";
-
-            // Obtiene los campos de la tabla adicional
-            string[] sCamposTabla = logic.Campos(sNombreTabla);
+            List<string> lstQueries = new List<string>();
+            var columnasPropiedades = logic.ObtenerColumnasYPropiedadesLogica(sNombreTabla);
             string sClaveForanea = logic.ObtenerClaveForanea(sNombreTabla, sTablaPrincipal);
 
-            // Verificar que la clave foránea se encuentre en los campos de la tabla adicional
-            if (Array.Exists(sCamposTabla, campo => campo == sClaveForanea))
+            // Verificar que la clave foránea esté en los campos de la tabla
+            if (!columnasPropiedades.Any(c => c.nombreColumna == sClaveForanea))
             {
-                sCampos += sClaveForanea + ", ";
-                sValoresCampos += "'" + idForaneo + "', ";
+                Console.WriteLine($"Error: La clave foránea {sClaveForanea} no existe en los campos de {sNombreTabla}.");
+                return null;
             }
 
-            // Itera sobre los controles del formulario y asigna valores
-            foreach (Control componente in Controls)
+            foreach (DataGridViewRow fila in dgvProductos.Rows)
             {
-                // Imprimir el nombre del componente para depuración
-                Console.WriteLine("Nombre del componente encontrado: " + componente.Name);
+                if (fila.IsNewRow) continue;
 
-                // Si el control es un TextBox, DateTimePicker o ComboBox
-                if (componente is TextBox || componente is DateTimePicker || componente is ComboBox)
+                string sQuery = $"INSERT INTO {sNombreTabla} ({sClaveForanea}, ";
+                string sValores = $"VALUES ('{idForaneo}', ";
+                bool hasValues = false;
+
+                foreach (var (nombreColumna, esAutoIncremental, esClaveForanea, esTinyInt) in columnasPropiedades)
                 {
-                    // Verifica si el componente está asociado a un campo de la tabla adicional
-                    foreach (string sNombreCampo in sCamposTabla)
+                    if (esAutoIncremental || nombreColumna == sClaveForanea) continue;
+
+                    if (dgvProductos.Columns.Contains(nombreColumna))
                     {
-                        string nombreEsperado = "extra_" + sNombreCampo;
-                        Console.WriteLine($"Buscando coincidencia para el campo: {sNombreCampo} con el componente: {componente.Name}");
+                        DataGridViewCell celda = fila.Cells[nombreColumna];
+                        string sValorCampo = celda?.Value?.ToString() ?? "";
 
-                        if (componente.Name == nombreEsperado)
+                        if (!string.IsNullOrEmpty(sValorCampo))
                         {
-                            string sValorCampo = string.Empty;
-
-                            // Si el control es un ComboBox, obtiene el valor seleccionado (ID)
-                            if (componente is ComboBox cb)
-                            {
-                                sValorCampo = cb.SelectedValue?.ToString() ?? "";
-                            }
-                            else if (componente is DateTimePicker dtp)
-                            {
-                                sValorCampo = dtp.Value.ToString("yyyy-MM-dd");
-                            }
-                            else if (componente is TextBox)
-                            {
-                                sValorCampo = componente.Text;
-                            }
-                            else if (componente is Button btn)
-                            {
-                                // Si el botón define el estado, asigna '0' o '1' según el texto del botón
-                                sValorCampo = (btn.Text == "Activado") ? "1" : "0";
-                            }
-                            // Si el valor del campo no está vacío, lo agrega a las cadenas de campos y valores
-                            if (!string.IsNullOrEmpty(sValorCampo))
-                            {
-                                sCampos += sNombreCampo + ", ";
-                                sValoresCampos += "'" + sValorCampo + "', ";
-                            }
-
-                            iPosicionCampo++;
-                            break;
+                            sQuery += $"{nombreColumna}, ";
+                            sValores += $"'{sValorCampo}', ";
+                            hasValues = true;
                         }
+                    }
+                }
+
+                if (hasValues)
+                {
+                    sQuery = sQuery.TrimEnd(' ', ',') + ") ";
+                    sValores = sValores.TrimEnd(' ', ',') + ");";
+
+                    string fullQuery = sQuery + sValores;
+                    Console.WriteLine("CONSULTA GENERADA PARA GRID: " + fullQuery);
+                    lstQueries.Add(fullQuery);
+                }
+            }
+
+            return lstQueries;
+        }
+        string CrearInsertDesdeControles(string sNombreTabla, string idForaneo)
+        {
+            var columnasPropiedades = logic.ObtenerColumnasYPropiedadesLogica(sNombreTabla);
+            string sClaveForanea = logic.ObtenerClaveForanea(sNombreTabla, sTablaPrincipal);
+
+            if (!columnasPropiedades.Any(c => c.nombreColumna == sClaveForanea))
+            {
+                Console.WriteLine($"Error: La clave foránea {sClaveForanea} no existe en los campos de {sNombreTabla}.");
+                return null;
+            }
+
+            string sQuery = $"INSERT INTO {sNombreTabla} ({sClaveForanea}, ";
+            string sValores = $"VALUES ('{idForaneo}', ";
+            bool hasValues = false;
+
+            foreach (var (nombreColumna, esAutoIncremental, esClaveForanea, esTinyInt) in columnasPropiedades)
+            {
+                if (esAutoIncremental || nombreColumna == sClaveForanea) continue;
+
+                Control control = Controls.Find("extra_" + nombreColumna, true).FirstOrDefault();
+
+                if (control != null)
+                {
+                    string sValorCampo = "";
+
+                    if (control is TextBox textBox)
+                        sValorCampo = textBox.Text;
+                    else if (control is ComboBox comboBox)
+                        sValorCampo = comboBox.SelectedValue?.ToString() ?? "";
+                    else if (control is DateTimePicker dateTimePicker)
+                        sValorCampo = dateTimePicker.Value.ToString("yyyy-MM-dd");
+
+                    if (!string.IsNullOrEmpty(sValorCampo))
+                    {
+                        sQuery += $"{nombreColumna}, ";
+                        sValores += $"'{sValorCampo}', ";
+                        hasValues = true;
                     }
                 }
             }
 
-            // Elimina las últimas comas y cierra las instrucciones
-            sCampos = sCampos.TrimEnd(' ', ',');
-            sValoresCampos = sValoresCampos.TrimEnd(' ', ',');
+            if (hasValues)
+            {
+                sQuery = sQuery.TrimEnd(' ', ',') + ") ";
+                sValores = sValores.TrimEnd(' ', ',') + ");";
+                string fullQuery = sQuery + sValores;
+                Console.WriteLine("CONSULTA GENERADA SIN GRID: " + fullQuery);
+                return fullQuery;
+            }
 
-            sQuery += sCampos + ") " + sValores + sValoresCampos + ");";
-
-            return sQuery;
+            return null;
         }
 
-        //******************************************** CODIGO HECHO POR JOEL LOPEZ***************************** 
+      
 
         //******************************************** CODIGO HECHO POR BRAYAN HERNANDEZ***************************** 
         private IEnumerable<Control> GetRelevantControls(Control container)
@@ -2967,6 +3039,7 @@ namespace Capa_Vista_Navegador
         // Este método maneja el evento de clic del botón "Guardar", asegurando que los datos sean válidos y guardándolos en la base de datos.
         private void Btn_Guardar_Click(object sender, EventArgs e)
         {
+           
             try
             {
                 // Muestra un mensaje de confirmación antes de proceder con el guardado.
@@ -3009,16 +3082,28 @@ namespace Capa_Vista_Navegador
                     );
                     return;
                 }
+                if (IngresarVariosControl != null && IngresarVariosControl.DataGridViewInformacionExtra != null)
+                {
+                    // Verifica si la grid extra está vacía
+                    if (IngresarVariosControl.DataGridViewInformacionExtra.Rows.Count == 0 ||
+     (IngresarVariosControl.DataGridViewInformacionExtra.Rows.Count == 1 && IngresarVariosControl.DataGridViewInformacionExtra.Rows[0].IsNewRow))
+                    {
+                        MessageBox.Show("Debe agregar al menos un registro en la tabla de detalles antes de guardar.",
+                                        "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return; // Salir del método y no continuar con el guardado
+                    }
+                    MessageBox.Show("esta llena");
+                }
 
                 // Verificar las operaciones de campo antes de cualquier inserción
-                    // Ejecutamos todas las operaciones de la lista de una sola vez
-                    if (!RealizarOperaciones())
+                // Ejecutamos todas las operaciones de la lista de una sola vez
+                if (!RealizarOperaciones())
                     {
                         MessageBox.Show("Error en las operaciones de campos. No se pudo completar una o más operaciones.", "Error de Operación", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return; // Cancelamos si alguna operación no es válida
                     }
-                
-               
+
+              
 
                 // Lista para almacenar las consultas SQL que se ejecutarán.
                 List<string> lstQueries = new List<string>();
@@ -3084,13 +3169,11 @@ namespace Capa_Vista_Navegador
                                 return;
                             }
 
-                            // Insertar en la tabla principal
+                            // Ejecuta la inserción en la tabla principal primero
                             logic.NuevoQuery(sQueryPrimeraTabla);
                             Console.WriteLine("Registro insertado en la tabla principal exitosamente.");
 
-                            lg.funinsertarabitacora(sIdUsuario, "Se insertó en " + sTablaPrincipal, sTablaPrincipal, sIdAplicacion);
-
-                            // Obtiene el último ID insertado en la tabla principal
+                            // Obtén el último ID insertado para utilizarlo en las tablas adicionales
                             string sUltimoIdPrimeraTabla = logic.UltimoID(sTablaPrincipal);
                             if (string.IsNullOrEmpty(sUltimoIdPrimeraTabla))
                             {
@@ -3098,43 +3181,50 @@ namespace Capa_Vista_Navegador
                                 return;
                             }
 
+                            // Registrar en la bitácora
+                            lg.funinsertarabitacora(sIdUsuario, "Se insertó en " + sTablaPrincipal, sTablaPrincipal, sIdAplicacion);
+
+                            // Lista para almacenar las consultas generadas
+                            
+
                             // Inserta en las tablas adicionales
                             foreach (string sTablaAdicional in lstTablasAdicionales)
                             {
-                                string sQueryAdicional = CrearInsertParaTablasExtras(sTablaAdicional, sUltimoIdPrimeraTabla);
-                                if (!string.IsNullOrEmpty(sQueryAdicional))
+                                DataGridView dgvProductos = (IngresarVariosControl != null && IngresarVariosControl.TablaVarios == sTablaAdicional)
+                                                            ? IngresarVariosControl.DataGridViewInformacionExtra
+                                                            : null;
+
+                                if (dgvProductos != null)
                                 {
-                                    lstQueries.Add(sQueryAdicional);
+                                    // Crear consultas individuales para cada fila en el DataGridView
+                                    var queriesGrid = CrearInsertDesdeDataGridView(sTablaAdicional, sUltimoIdPrimeraTabla, dgvProductos);
+                                    if (queriesGrid != null) lstQueries.AddRange(queriesGrid);
                                 }
                                 else
                                 {
-                                    Console.WriteLine("Error: La consulta generada para la tabla adicional " + sTablaAdicional + " es nula o vacía.");
+                                    string queryControles = CrearInsertDesdeControles(sTablaAdicional, sUltimoIdPrimeraTabla);
+                                    if (!string.IsNullOrEmpty(queryControles)) lstQueries.Add(queryControles);
                                 }
                             }
+
                             // Insertar en las tablas asociativas
-                            // **Insertar en las tablas asociativas**
-                            // **Insertar en las tablas asociativas**
                             foreach (var asociativa in diccionarioTablasAsociativas)
                             {
-                                string nombreTablaAsociativa = asociativa.Key;  // Nombre de la tabla asociativa
-                                List<string> columnas = asociativa.Value;       // Lista de columnas asociadas a la tabla
+                                string nombreTablaAsociativa = asociativa.Key;
+                                List<string> columnas = asociativa.Value;
 
-                                // Diccionario para almacenar los valores de los campos que vamos a insertar
                                 Dictionary<string, string> valoresCampos = new Dictionary<string, string>();
 
-                                // Recorremos las columnas y obtenemos los valores del formulario
                                 for (int i = 0; i < columnas.Count; i += 2)
                                 {
-                                    string nombreCampo = columnas[i];       // Este es el nombre del campo
-                                    string nombreComponente = columnas[i + 1]; // Este es el nombre del componente (valor del campo)
-
-                                    // Usa la función ObtenerValorActualizar para obtener el valor del componente
+                                    string nombreCampo = columnas[i];
+                                    string nombreComponente = columnas[i + 1];
                                     string valorCampo = ObtenerValorActualizar(nombreComponente);
                                     Console.WriteLine("VALOR COMPONENTE: " + nombreComponente + " VALOR: " + valorCampo);
 
                                     if (!string.IsNullOrEmpty(valorCampo))
                                     {
-                                        valoresCampos[nombreCampo] = valorCampo;  // Almacena el valor en el diccionario
+                                        valoresCampos[nombreCampo] = valorCampo;
                                     }
                                     else
                                     {
@@ -3142,13 +3232,12 @@ namespace Capa_Vista_Navegador
                                     }
                                 }
 
-                                // Validación: Solo generar la consulta si todos los campos requeridos tienen valores válidos
-                                if (valoresCampos.Count == columnas.Count / 2)  // Asegurarse de que tenemos valores para todos los campos
+                                if (valoresCampos.Count == columnas.Count / 2)
                                 {
                                     string sQueryAsociativa = CrearInsertParaAsociativas(nombreTablaAsociativa, valoresCampos);
                                     if (!string.IsNullOrEmpty(sQueryAsociativa))
                                     {
-                                        lstQueries.Add(sQueryAsociativa);  // Solo agregar la consulta si es válida
+                                        lstQueries.Add(sQueryAsociativa);
                                         Console.WriteLine("QUERY GENERADO: " + sQueryAsociativa);
                                     }
                                 }
@@ -3157,8 +3246,10 @@ namespace Capa_Vista_Navegador
                                     Console.WriteLine($"Error: No se pudieron obtener todos los valores para la tabla {nombreTablaAsociativa}.");
                                 }
                             }
-                            // Ejecutar todas las consultas
+
+                            // Ejecutar todas las consultas en una sola transacción
                             logic.InsertarDatosEnMultiplesTablas(lstQueries);
+
                             MessageBox.Show("El registro ha sido guardado correctamente.", "Guardado Exitoso", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         }
                         catch (Exception ex)

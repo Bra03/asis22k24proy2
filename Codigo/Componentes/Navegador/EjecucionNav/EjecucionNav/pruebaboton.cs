@@ -25,14 +25,16 @@ namespace ejecucionNav
             navegador1.ObtenerIdUsuario("admin");
             navegador1.AsignarTabla("tbl_cuentas");
             navegador1.AsignarNombreForm("Cuentas");
-
+           
             navegador1.AsignarComboConTabla("tbl_tipocuenta", "PK_id_tipocuenta", "nombre_tipocuenta", 1);
             navegador1.AsignarComboConTabla("tbl_encabezadoclasecuenta", "Pk_id_encabezadocuenta", "nombre_tipocuenta", 1);
             navegador1.AsignarComboConTabla("tbl_cuentas", "Pk_id_cuenta", "nombre_cuenta", 1);
 
             navegador1.AsignarForaneas("tbl_tipocuenta", "serie_tipocuenta", "Pk_id_tipocuenta", "PK_id_tipocuenta");
             navegador1.AsignarForaneas("tbl_encabezadoclasecuenta", "nombre_tipocuenta", "Pk_id_encabezadocuenta","Pk_id_encabezadocuenta");
-           // navegador1.AsignarForaneas("tbl_cuentas", "nombre_cuenta", "Pk_id_cuenta_enlace", "Pk_id_cuenta");
+
+            navegador1.AsignarVarios(true);
+            // navegador1.AsignarForaneas("tbl_cuentas", "nombre_cuenta", "Pk_id_cuenta_enlace", "Pk_id_cuenta");
         }
     }
 }
