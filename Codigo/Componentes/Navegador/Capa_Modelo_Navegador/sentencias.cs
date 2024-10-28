@@ -1276,8 +1276,47 @@ namespace Capa_Modelo_Navegador
             return id;
         }
 
+        public string GenerarInsertCondicional(string tabla, Dictionary<string, string> valoresComponentes, Dictionary<string, string> mapeoComponentesCampos)
+        {
+            try
+            {
+                var columnasPropiedades = ObtenerColumnasYPropiedades(tabla);
+                var camposValidos = columnasPropiedades
+                    .Where(c => !c.esAutoIncremental) // Permitir claves foráneas
+                    .Select(c => c.nombreColumna)
+                    .ToList();
 
+                var sCampos = new List<string>();
+                var sValoresCampos = new List<string>();
 
+                // Construir el mapeo de valores para el `INSERT`
+                foreach (var map in mapeoComponentesCampos)
+                {
+                    string campo = map.Value; // Campo en la tabla
+                    if (camposValidos.Contains(campo) && valoresComponentes.TryGetValue(map.Key, out var valor))
+                    {
+                        sCampos.Add(campo);
+                        sValoresCampos.Add($"'{valor}'");
+                    }
+                }
+
+                if (!sCampos.Any())
+                {
+                    Console.WriteLine("Error: No hay valores válidos para insertar.");
+                    return null;
+                }
+
+                // Crear la consulta `INSERT` como `string`
+                string query = $"INSERT INTO {tabla} ({string.Join(", ", sCampos)}) VALUES ({string.Join(", ", sValoresCampos)});";
+                Console.WriteLine("CONDICIONAL QUERY GENERADA: " + query);
+                return query;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al generar la consulta de inserción: {ex.Message}");
+                return null;
+            }
+        }
 
     }
 }

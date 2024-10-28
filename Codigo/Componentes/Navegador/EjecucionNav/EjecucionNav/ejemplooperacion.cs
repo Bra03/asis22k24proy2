@@ -44,13 +44,24 @@ namespace ejecucionNav
             // Configuración de los alias para las tablas adicionales
 
             List<string> tablas = new List<string> { "facturad" };
-            
+
             navegador1.AsignarTablas(tablas);
 
-            string[] aliasfacturadetalle = { "INVCODIGO", "FACDCANTIDAD", "FACDPRECIO","estado" };
+            string[] aliasfacturadetalle = { "INVCODIGO", "FACDCANTIDAD", "FACDPRECIO", "estado" };
             navegador1.AsignarAliasExtras("facturad", aliasfacturadetalle);
             List<string> tablascomponentes = new List<string> { "facturad" };
             navegador1.AsignarTablaComponentes(tablascomponentes);
+
+            /*
+             navegador1.asignaropercioncondicional
+            (
+            si valorcomponente < "campo" que esta en "tabla",hacer "insertar", 
+            en "tabla" valoressacados de componentes, "componente1", "componente2", "componente..." segun sean necesarios
+            
+            
+            );
+             
+             */
 
 
         }

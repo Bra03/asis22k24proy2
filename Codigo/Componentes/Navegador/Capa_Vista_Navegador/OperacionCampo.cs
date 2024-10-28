@@ -6,25 +6,26 @@ using System.Threading.Tasks;
 
 namespace Capa_Vista_Navegador
 {
+
+
+    // Clase para representar cada operación
     public class OperacionCampo
     {
-        public string TablaOrigen { get; set; }
         public string CampoOrigen { get; set; }
         public string TablaDestino { get; set; }
         public string CampoDestino { get; set; }
         public string Operacion { get; set; }
-        public string CampoCondicional { get; set; } // Nuevo campo condicional
-        public string ValorCondicional { get; set; } // Nuevo valor condicional
+        public string CampoCondicional { get; set; }
+        public string ValorCondicional { get; set; }
 
-        public OperacionCampo(string tablaOrigen, string campoOrigen, string tablaDestino, string campoDestino, string operacion, string campoCondicional, string valorCondicional)
+        public OperacionCampo(string campoOrigen, string tablaDestino, string campoDestino, string operacion, string campoCondicional, string valorCondicional)
         {
-            TablaOrigen = tablaOrigen;
             CampoOrigen = campoOrigen;
             TablaDestino = tablaDestino;
             CampoDestino = campoDestino;
             Operacion = operacion;
-            CampoCondicional = campoCondicional;  // Asignamos el campo condicional
-            ValorCondicional = valorCondicional;  // Asignamos el valor condicional
+            CampoCondicional = campoCondicional;
+            ValorCondicional = valorCondicional;
         }
     }
 

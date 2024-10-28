@@ -281,6 +281,18 @@ namespace Capa_Controlador_Navegador
             }
         }
 
+        public string RealizarInsercionCondicional(string tabla, Dictionary<string, string> valoresComponentes, Dictionary<string, string> mapeoComponentesCampos)
+        {
+            if (valoresComponentes == null || valoresComponentes.Count == 0)
+            {
+                Console.WriteLine("No se proporcionaron valores para la inserción.");
+                return null;
+            }
+
+            return sn.GenerarInsertCondicional(tabla, valoresComponentes, mapeoComponentesCampos); // Obtiene la consulta `INSERT` como `string`
+        }
+
+
 
 
     }

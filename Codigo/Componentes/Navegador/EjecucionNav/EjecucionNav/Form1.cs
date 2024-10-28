@@ -94,14 +94,14 @@ namespace ejecucionNav
 
         private void mantenimientoToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            mantenimiento mantenimiento = new mantenimiento();
+            MANPRODUC mantenimiento = new MANPRODUC();
             
             mantenimiento.Show();
         }
 
         private void comprasToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            compras compras = new compras();
+            Prueba compras = new Prueba();
             
             compras.Show();
         }

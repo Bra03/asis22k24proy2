@@ -43,7 +43,7 @@ namespace ejecucionNav
 
             
 
-            navegador1.AsignarOperacion("facturad", "FACDCANTIDAD", "inventario", "INVCANTIDAD", "restar", "INVCODIGO", "INVCODIGO");
+          //  navegador1.AsignarOperacion("facturad", "FACDCANTIDAD", "inventario", "INVCANTIDAD", "restar", "INVCODIGO", "INVCODIGO");
 
            // navegador1.AsignarOperacionTransaccion("inventario","INVCANTIDAD","existencias","EXISALDO","copiar", "INVCODIGO","INVCODIGO");
             //navegador1.AsignarOperacion("inventario", "FACDCANTIDAD", "existencias", "EXISALDO", "restar", "INVCODIGO");

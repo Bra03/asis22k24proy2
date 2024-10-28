@@ -70,16 +70,16 @@ namespace Capa_Vista_Navegador
         string sEstadoAyuda = ""; // Estado de la ayuda
         string sTablaAdicional = "";
         // Variables globales
-        string tablaOrigenGlobal="";
-        string campoOrigenGlobal="";
-        string tablaDestinoGlobal="";
-        string campoDestinoGlobal="";
-        string operacionGlobal="";
+        string tablaOrigenGlobal = "";
+        string campoOrigenGlobal = "";
+        string tablaDestinoGlobal = "";
+        string campoDestinoGlobal = "";
+        string operacionGlobal = "";
         string CampoDescriptivoGlobal = "";
         string valorDescriptivoGlobal = "";
 
 
-       Font fFuenteLabels = new Font("Century Gothic", 13.0f, FontStyle.Regular, GraphicsUnit.Pixel); // Fuente para labels
+        Font fFuenteLabels = new Font("Century Gothic", 13.0f, FontStyle.Regular, GraphicsUnit.Pixel); // Fuente para labels
         ToolTip tpAyuda = new ToolTip(); // ToolTip para mostrar ayudas en la interfaz
         private List<Tuple<string, string, string, string>> relacionesForaneas = new List<Tuple<string, string, string, string>>();
         List<Tuple<string, string, string>> comboData = new List<Tuple<string, string, string>>();
@@ -89,9 +89,12 @@ namespace Capa_Vista_Navegador
         Dictionary<string, List<string>> diccionarioTablasAsociativas = new Dictionary<string, List<string>>();
         // Declaración del diccionario para almacenar las tablas asociativas
         List<string> lstTablasParaComponentes = new List<string>();
+        List<string> listaOperacionesCondicionales = new List<string>();
+
         private IngresarVarios IngresarVariosControl;
         private bool activarIngresarVarios;
         private string nombreTablaVarios;
+        private List<ReglaOperacion> listaReglas = new List<ReglaOperacion>();
 
 
 
@@ -128,7 +131,7 @@ namespace Capa_Vista_Navegador
             tpAyuda.SetToolTip(Btn_AyudaBox, "Asignar Documento de Ayuda");
             tpAyuda.SetToolTip(Btn_Reportes_Principal, "Mostrar un Reporte");
 
-           
+
         }
 
 
@@ -344,7 +347,7 @@ namespace Capa_Vista_Navegador
         // Lista para almacenar múltiples relaciones foráneas como tuplas
 
         // Lista para almacenar múltiples relaciones foráneas
-        
+
         public void AsignarForaneas(string sTablaRela, string sCampoDescri, string sColumnaFora, string sColumnaPrimariaRelaciona)
         {
             // Añadir la relación foránea a la lista
@@ -371,19 +374,137 @@ namespace Capa_Vista_Navegador
         {
             this.sIdAplicacion = sIdAplicacion; // Asigna el ID de la aplicación
         }
-        public void AsignarOperacion(string tablaOrigen, string campoOrigen, string tablaDestino, string campoDestino, string operacion, string campoCondicional, string valorCondicional)
+        public void AsignarReglaOperacion(
+            string componenteOrigen,
+            string tablaComparacion,
+            string campoComparacion,
+            string condicion,
+            string accion,
+            string tablaInsercion,
+            string valorClavePrimaria,
+            Dictionary<string, string> mapeoComponentesCampos // Diccionario de mapeo
+        )
         {
-            OperacionCampo nuevaOperacion = new OperacionCampo(tablaOrigen, campoOrigen, tablaDestino, campoDestino, operacion, campoCondicional, valorCondicional);
-            listaOperaciones.Add(nuevaOperacion);
+            // Crear la nueva regla y asignar sus propiedades
+            ReglaOperacion nuevaRegla = new ReglaOperacion
+            {
+                ComponenteOrigen = componenteOrigen,
+                TablaComparacion = tablaComparacion,
+                CampoComparacion = campoComparacion,
+                Condicion = condicion,
+                Accion = accion,
+                TablaInsercion = tablaInsercion,
+                ClavePrimaria = valorClavePrimaria,
+                MapeoComponentesCampos = mapeoComponentesCampos // Asignar el diccionario de mapeo
+            };
 
-            Console.WriteLine($"Operación '{operacion}' asignada entre {campoOrigen} y {campoDestino} con condición en '{campoCondicional}' = '{valorCondicional}'.");
+            // Agregar la regla a la lista de reglas
+            listaReglas.Add(nuevaRegla);
+
+            Console.WriteLine($"Regla condicional agregada: si '{componenteOrigen}' es '{condicion}' que '{campoComparacion}' en '{tablaComparacion}', hacer '{accion}' en '{tablaInsercion}' con los mapeos {string.Join(", ", mapeoComponentesCampos)}.");
         }
+        public bool EjecutarReglasCondicionales()
+        {
+            try
+            {
+                foreach (var regla in listaReglas)
+                {
+                    // Obtener el valor del componente origen para la condición
+                    string valorComponenteOrigen = ObtenerValorActualizar(regla.ComponenteOrigen);
+                    Console.WriteLine("VALOR PARA CONDICION COMPONENTE ORIGEN: " + valorComponenteOrigen);
 
+                    if (string.IsNullOrEmpty(valorComponenteOrigen))
+                    {
+                        Console.WriteLine($"Error: El valor en '{regla.ComponenteOrigen}' no ha sido proporcionado.");
+                        continue;
+                    }
+                    decimal valorComponente = decimal.Parse(valorComponenteOrigen);
 
+                    // Obtener el valor de la clave primaria
+                    string valorClavePrimaria = ObtenerValorActualizar(regla.ClavePrimaria);
+                    Console.WriteLine("VALOR CLAVE PRIMARIA: " + valorClavePrimaria);
 
+                    if (string.IsNullOrEmpty(valorClavePrimaria))
+                    {
+                        Console.WriteLine($"Error: No se encontró un valor para la clave primaria '{regla.ClavePrimaria}'.");
+                        continue;
+                    }
 
+                    // Obtener el valor del campo de comparación desde la tabla según la clave primaria
+                    string valorCampoComparacion = logic.ObtenerValorCampo(
+                        regla.TablaComparacion,
+                        regla.CampoComparacion,
+                        logic.ObtenerClavePrimaria(regla.TablaComparacion),
+                        valorClavePrimaria);
 
+                    Console.WriteLine("VALOR COMPARACION: " + valorCampoComparacion);
+                    if (string.IsNullOrEmpty(valorCampoComparacion))
+                    {
+                        Console.WriteLine($"Error: No se encontró el valor en '{regla.CampoComparacion}' de la tabla '{regla.TablaComparacion}'.");
+                        continue;
+                    }
+                    decimal valorComparacion = decimal.Parse(valorCampoComparacion);
 
+                    // Evaluar la condición
+                    bool condicionCumplida = EvaluarCondicion(valorComponente, regla.Condicion, valorComparacion);
+                    if (!condicionCumplida)
+                    {
+                        Console.WriteLine("La condición no se cumple. Operación omitida.");
+                        continue;
+                    }
+
+                    // Ejecutar el INSERT si se cumple la condición
+                    if (regla.Accion == "insertar")
+                    {
+                        var valoresComponentes = new Dictionary<string, string>();
+
+                        foreach (var map in regla.MapeoComponentesCampos)
+                        {
+                            string valorComponenteInsertar = ObtenerValorActualizar(map.Key);
+                            if (!string.IsNullOrEmpty(valorComponenteInsertar))
+                            {
+                                valoresComponentes[map.Key] = valorComponenteInsertar;
+                            }
+                        }
+
+                        if (valoresComponentes.Count > 0)
+                        {
+                            string insertQuery = logic.RealizarInsercionCondicional(regla.TablaInsercion, valoresComponentes, regla.MapeoComponentesCampos);
+                            MessageBox.Show("Se asignó un registro en " + regla.TablaInsercion);
+                            if (insertQuery != null)
+                            {
+                                lstQueries2.Add(insertQuery); // Añade la consulta a la lista si es válida
+                            }
+                            else
+                            {
+                                MessageBox.Show("Error al generar la consulta de inserción. No se completará la operación.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
+                        }
+                    }
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al ejecutar las reglas condicionales: {ex.Message}");
+                return false;
+            }
+        }
+        private bool EvaluarCondicion(decimal valorComponente, string condicion, decimal valorComparacion)
+        {
+            switch (condicion)
+            {
+                case "menor":
+                    return valorComponente < valorComparacion;
+                case "mayor":
+                    return valorComponente > valorComparacion;
+                case "igual":
+                    return valorComponente == valorComparacion;
+                default:
+                    Console.WriteLine("Condición no reconocida.");
+                    return false;
+            }
+        }
 
         private int NumeroAlias()
         {
@@ -466,15 +587,15 @@ namespace Capa_Vista_Navegador
             {
                 if (logic.ContarRegAyuda(sAyudar) > 0)
                 {
-                    sIdAyuda = sAyudar; 
+                    sIdAyuda = sAyudar;
                     sRutaAyuda = logic.ModRuta(sIdAyuda);
-                    sIndiceAyuda = logic.ModIndice(sIdAyuda); 
+                    sIndiceAyuda = logic.ModIndice(sIdAyuda);
                     if (sRutaAyuda == "" || sIndiceAyuda == "" || sRutaAyuda == null || sIndiceAyuda == null)
                     {
                         DialogResult drValidacion = MessageBox.Show("La Ruta o índice de la ayuda está vacía", "Verificación de requisitos", MessageBoxButtons.OK);
                         if (drValidacion == DialogResult.OK)
                         {
-                            iCorrecto = 1; 
+                            iCorrecto = 1;
                         }
                     }
                 }
@@ -493,26 +614,26 @@ namespace Capa_Vista_Navegador
                 DialogResult drValidacion = MessageBox.Show(sAyudaOK + ", Por favor incluirla", "Verificación de requisitos", MessageBoxButtons.OK);
                 if (drValidacion == DialogResult.OK)
                 {
-                    iCorrecto = 1; 
+                    iCorrecto = 1;
                 }
             }
         }
 
         public void AsignarReporte(string sRepo)
         {
-            sIdReporte = sRepo; 
+            sIdReporte = sRepo;
         }
 
         //******************************************** CODIGO HECHO POR VICTOR CASTELLANOS ***************************** 
 
         public void AsignarSalida(Form frmSalida)
         {
-            frmCerrar = frmSalida; 
+            frmCerrar = frmSalida;
         }
 
         public void AsignarColorFuente(Color colFuenteC)
         {
-            cColorFuente = colFuenteC; 
+            cColorFuente = colFuenteC;
         }
 
         public void AsignarTabla(string sTabla)
@@ -543,26 +664,26 @@ namespace Capa_Vista_Navegador
 
         public void AsignarNombreForm(string sNom)
         {
-            sNombreFormulario = sNom; 
-            Txt_Tabla.Text = sNombreFormulario; 
+            sNombreFormulario = sNom;
+            Txt_Tabla.Text = sNombreFormulario;
         }
 
         //******************************************** CODIGO HECHO POR JOSUE CACAO ***************************** 
 
-       public void AsignarComboConTabla(string sTablaPrincipal, string sCampoClave, string sCampoDisplay, int iModo)
+        public void AsignarComboConTabla(string sTablaPrincipal, string sCampoClave, string sCampoDisplay, int iModo)
         {
             // Verifica si la sTablaPrincipal existe
             string sTablaOK = logic.TestTabla(sTablaPrincipal);
             if (sTablaOK == "")
             {
                 // Asigna los valores para el combo
-                arrModoCampoCombo[iNumeroCombos] = iModo; 
+                arrModoCampoCombo[iNumeroCombos] = iModo;
                 arrTablaCombo[iNumeroCombos] = sTablaPrincipal;
                 arrCampoCombo[iNumeroCombos] = sCampoClave;
                 arrCampoDisplayCombo[iNumeroCombos] = sCampoDisplay;
                 comboData.Add(new Tuple<string, string, string>(sTablaPrincipal, sCampoClave, sCampoDisplay));
                 iNumeroCombos++;
-               
+
             }
             else
             {
@@ -580,16 +701,16 @@ namespace Capa_Vista_Navegador
 
         public void AsignarColorFondo(Color colNuevo)
         {
-            cNuevoColorFondo = colNuevo; 
+            cNuevoColorFondo = colNuevo;
         }
 
 
-        public void AsignarOperacionTransaccion(string tablaOrigen, string campoOrigen, string tablaDestino, string campoDestino, string operacion, string campoCondicional, string valorCondicional)
-        {
-            OperacionCampo nuevaOperacion = new OperacionCampo(tablaOrigen, campoOrigen, tablaDestino, campoDestino, operacion, campoCondicional, valorCondicional);
-            listaOperaciones.Add(nuevaOperacion);
-        }
-        public bool RealizarOperacionesTransaccion()
+        // public void AsignarOperacionTransaccion(string tablaOrigen, string campoOrigen, string tablaDestino, string campoDestino, string operacion, string campoCondicional, string valorCondicional)
+        //{
+        //   OperacionCampo nuevaOperacion = new OperacionCampo(tablaOrigen, campoOrigen, tablaDestino, campoDestino, operacion, campoCondicional, valorCondicional);
+        //  listaOperaciones.Add(nuevaOperacion);
+        //}
+        /*public bool RealizarOperacionesTransaccion()
         {
             try
             {
@@ -653,14 +774,14 @@ namespace Capa_Vista_Navegador
                 return false;
             }
         }
-
+        */
 
 
         public void AsignarComboConLista(int iPos, string sLista)
         {
-            iPosicionCombo = iPos - 1; 
+            iPosicionCombo = iPos - 1;
             LimpiarLista(sLista);
-            arrModoCampoCombo[iNumeroCombos] = 0; 
+            arrModoCampoCombo[iNumeroCombos] = 0;
             iNumeroCombos++;
         }
 
@@ -693,11 +814,11 @@ namespace Capa_Vista_Navegador
             string valorOrigen2 = ObtenerValorActualizar(componenteOrigen2);
             Control compDest = this.Controls.Find(componenteDestino, true).FirstOrDefault();
 
-          /*  if (string.IsNullOrEmpty(valorOrigen1) || string.IsNullOrEmpty(valorOrigen2) || compDest == null)
-            {
-                Console.WriteLine($"Error: Uno o más componentes no fueron encontrados o están vacíos. Verifique los nombres de los componentes.");
-                return;
-            }*/
+            /*  if (string.IsNullOrEmpty(valorOrigen1) || string.IsNullOrEmpty(valorOrigen2) || compDest == null)
+              {
+                  Console.WriteLine($"Error: Uno o más componentes no fueron encontrados o están vacíos. Verifique los nombres de los componentes.");
+                  return;
+              }*/
 
             // Suscribirse a los eventos de cambio de ambos componentes origen
             Control comp1 = this.Controls.Find(componenteOrigen1, true).FirstOrDefault();
@@ -826,158 +947,122 @@ namespace Capa_Vista_Navegador
             return "";
         }
 
+        List<string[]> operacionesPorFila = new List<string[]>();
 
-        public bool RealizarOperaciones()
+        public void AsignarOperacion(string campoOrigen, string tablaDestino, string campoDestino, string operacion, string campoCondicional, string valorCondicional)
+        {
+            var nuevaOperacion = new OperacionCampo(campoOrigen, tablaDestino, campoDestino, operacion, campoCondicional, valorCondicional);
+            listaOperaciones.Add(nuevaOperacion);
+
+            Console.WriteLine($"Operación '{operacion}' asignada entre componente {campoOrigen} y campo {campoDestino} de {tablaDestino} con condición en '{campoCondicional}' = '{valorCondicional}'.");
+        }
+        public bool GenerarConsultasOperaciones()
         {
             try
             {
                 foreach (var operacion in listaOperaciones)
                 {
-                    // Obtener el valor del campo origen directamente desde el componente del formulario
-                    string valorOrigen = ObtenerValorActualizar(operacion.CampoOrigen); // Obtenemos el valor del componente
-                    Console.WriteLine($"El valor del componente origen ({operacion.CampoOrigen}) es: " + valorOrigen);
-
+                    // Obtener el valor del componente origen
+                    string valorOrigen = ObtenerValorActualizar(operacion.CampoOrigen);
                     if (string.IsNullOrEmpty(valorOrigen))
                     {
                         Console.WriteLine("Error: El valor origen no ha sido proporcionado en el componente.");
-                        return false;
+                        continue;
                     }
 
-                    // Obtener el valor condicional desde el componente del formulario
-                    string valorCondicional = ObtenerValorActualizar(operacion.ValorCondicional); // Obtenemos el valor del componente condicional
-                    Console.WriteLine($"El valor del componente condicional ({operacion.CampoCondicional}) es: " + valorCondicional);
-
+                    // Obtener el valor condicional desde el componente
+                    string valorCondicional = ObtenerValorActualizar(operacion.ValorCondicional);
                     if (string.IsNullOrEmpty(valorCondicional))
                     {
                         Console.WriteLine("Error: El valor condicional no ha sido proporcionado en el componente.");
-                        return false;
+                        continue;
                     }
 
-                    // Obtener el valor actual del campo destino (por ejemplo, las existencias actuales del producto en el inventario)
+                    // Obtener el valor actual del campo destino desde la base de datos
                     string valorDestino = logic.ObtenerValorCampo(operacion.TablaDestino, operacion.CampoDestino, operacion.CampoCondicional, valorCondicional);
-
-                    // Obtener los tipos de datos de los campos origen y destino
-                    string tipoCampoOrigen = logic.ObtenerTipoCampo(operacion.TablaOrigen, operacion.CampoOrigen);
                     string tipoCampoDestino = logic.ObtenerTipoCampo(operacion.TablaDestino, operacion.CampoDestino);
 
-                    // Verificar que ambos campos sean numéricos (int o decimal)
-                    if (!(tipoCampoOrigen.Contains("int") || tipoCampoOrigen.Contains("decimal")) || !(tipoCampoDestino.Contains("int") || tipoCampoDestino.Contains("decimal")))
+                    // Generar la consulta según el tipo de campo y agregarla solo si no hay error
+                    string query = tipoCampoDestino.Contains("int")
+                        ? GenerarQueryOperacionEnteros(valorOrigen, valorDestino, operacion, valorCondicional)
+                        : GenerarQueryOperacionDecimales(valorOrigen, valorDestino, operacion, valorCondicional);
+
+                    if (string.IsNullOrEmpty(query))
                     {
-                        Console.WriteLine($"Error: Los tipos de los campos no coinciden o no son numéricos. Campo origen: {tipoCampoOrigen}, Campo destino: {tipoCampoDestino}");
-                        return false;
+                        Console.WriteLine("Error en operación: El resultado no puede ser negativo.");
+                        return false; // Si ocurre un error, se detiene la generación de consultas
                     }
 
-                    // Convertir los valores a enteros o decimales según corresponda y realizar la operación
-                    if (tipoCampoOrigen.Contains("int"))
-                    {
-                        if (!RealizarOperacionEnteros(valorOrigen, valorDestino, operacion, valorCondicional))
-                        {
-                            return false; // Si alguna operación falla, se detiene el proceso
-                        }
-                    }
-                    else if (tipoCampoOrigen.Contains("decimal"))
-                    {
-                        if (!RealizarOperacionDecimales(valorOrigen, valorDestino, operacion, valorCondicional))
-                        {
-                            return false; // Si alguna operación falla, se detiene el proceso
-                        }
-                    }
-
-                    Console.WriteLine($"Operación '{operacion.Operacion}' realizada exitosamente entre {operacion.CampoOrigen} y {operacion.CampoDestino}.");
+                    lstQueries2.Add(query);
                 }
-
-                return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al realizar la operación: {ex.Message}");
+                Console.WriteLine($"Error al generar consultas de operación: {ex.Message}");
                 return false;
             }
+            return true;
         }
 
 
-        private bool RealizarOperacionEnteros(string valorOrigen, string valorDestino, OperacionCampo operacion, string valorCondicional)
+        private string GenerarQueryOperacionEnteros(string valorOrigen, string valorDestino, OperacionCampo operacion, string valorCondicional)
         {
-            try
+            int valorNumOrigen = int.Parse(valorOrigen);
+            int valorNumDestino = string.IsNullOrEmpty(valorDestino) ? 0 : int.Parse(valorDestino);
+            int resultadoOperacion = 0;
+
+            switch (operacion.Operacion)
             {
-                int resultadoOperacion = 0;
-                int valorNumOrigen = int.Parse(valorOrigen);
-                int valorNumDestino = string.IsNullOrEmpty(valorDestino) ? 0 : int.Parse(valorDestino); // Si valorDestino está vacío, usar 0
-
-                switch (operacion.Operacion)
-                {
-                    case "copiar":
-                        resultadoOperacion = valorNumOrigen;
-                        break;
-                    case "sumar":
-                        resultadoOperacion = valorNumDestino + valorNumOrigen;
-                        break;
-                    case "restar":
-                        resultadoOperacion = valorNumDestino - valorNumOrigen;
-                        if (resultadoOperacion < 0)
-                        {
-                            Console.WriteLine("Error: El resultado de la resta no puede ser negativo.");
-                            return false;
-                        }
-                        break;
-                    default:
-                        Console.WriteLine("Operación no reconocida.");
-                        return false;
-                }
-
-                // Actualizar el valor en la tabla destino usando el campo condicional
-                logic.ActualizarCampo(operacion.TablaDestino, operacion.CampoDestino, resultadoOperacion.ToString(), operacion.CampoCondicional, valorCondicional);
-
-                return true;
+                case "copiar":
+                    resultadoOperacion = valorNumOrigen;
+                    break;
+                case "sumar":
+                    resultadoOperacion = valorNumDestino + valorNumOrigen;
+                    break;
+                case "restar":
+                    resultadoOperacion = valorNumDestino - valorNumOrigen;
+                    if (resultadoOperacion < 0)
+                    {
+                        Console.WriteLine("Error: El resultado de la resta no puede ser negativo.");
+                        return null;
+                    }
+                    break;
+                default:
+                    Console.WriteLine("Operación no reconocida.");
+                    return null;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error al realizar la operación con enteros: {ex.Message}");
-                return false;
-            }
+
+            return $"UPDATE {operacion.TablaDestino} SET {operacion.CampoDestino} = {resultadoOperacion} WHERE {operacion.CampoCondicional} = '{valorCondicional}' AND estado = 1;";
         }
 
-
-
-        private bool RealizarOperacionDecimales(string valorOrigen, string valorDestino, OperacionCampo operacion, string valorCondicional)
+        private string GenerarQueryOperacionDecimales(string valorOrigen, string valorDestino, OperacionCampo operacion, string valorCondicional)
         {
-            try
+            decimal valorDecOrigen = decimal.Parse(valorOrigen);
+            decimal valorDecDestino = string.IsNullOrEmpty(valorDestino) ? 0 : decimal.Parse(valorDestino);
+            decimal resultadoOperacionDecimal = 0;
+
+            switch (operacion.Operacion)
             {
-                decimal resultadoOperacionDecimal = 0;
-                decimal valorDecOrigen = decimal.Parse(valorOrigen);
-                decimal valorDecDestino = string.IsNullOrEmpty(valorDestino) ? 0 : decimal.Parse(valorDestino);
-
-                switch (operacion.Operacion)
-                {
-                    case "copiar":
-                        resultadoOperacionDecimal = valorDecOrigen;
-                        break;
-                    case "sumar":
-                        resultadoOperacionDecimal = valorDecDestino + valorDecOrigen;
-                        break;
-                    case "restar":
-                        resultadoOperacionDecimal = valorDecDestino - valorDecOrigen;
-                        if (resultadoOperacionDecimal < 0)
-                        {
-                            Console.WriteLine("Error: El resultado de la resta no puede ser negativo.");
-                            return false;
-                        }
-                        break;
-                    default:
-                        Console.WriteLine("Operación no reconocida.");
-                        return false;
-                }
-
-                // Actualizar el valor en la tabla destino usando el campo condicional
-                logic.ActualizarCampo(operacion.TablaDestino, operacion.CampoDestino, resultadoOperacionDecimal.ToString(), operacion.CampoCondicional, valorCondicional);
-
-                return true;
+                case "copiar":
+                    resultadoOperacionDecimal = valorDecOrigen;
+                    break;
+                case "sumar":
+                    resultadoOperacionDecimal = valorDecDestino + valorDecOrigen;
+                    break;
+                case "restar":
+                    resultadoOperacionDecimal = valorDecDestino - valorDecOrigen;
+                    if (resultadoOperacionDecimal < 0)
+                    {
+                        Console.WriteLine("Error: El resultado de la resta no puede ser negativo.");
+                        return null;
+                    }
+                    break;
+                default:
+                    Console.WriteLine("Operación no reconocida.");
+                    return null;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error al realizar la operación con decimales: {ex.Message}");
-                return false;
-            }
+
+            return $"UPDATE {operacion.TablaDestino} SET {operacion.CampoDestino} = {resultadoOperacionDecimal} WHERE {operacion.CampoCondicional} = '{valorCondicional}' AND estado = 1;";
         }
 
 
@@ -1029,9 +1114,9 @@ namespace Capa_Vista_Navegador
 
         void LimpiarListaItems()
         {
-            for (int iIndex = 0; iIndex < arrListaItems.Length; iIndex++) 
+            for (int iIndex = 0; iIndex < arrListaItems.Length; iIndex++)
             {
-                arrListaItems[iIndex] = ""; 
+                arrListaItems[iIndex] = "";
             }
         }
         //******************************************** CODIGO HECHO POR SEBASTIAN LETONA ***************************** 
@@ -1087,7 +1172,7 @@ namespace Capa_Vista_Navegador
                         if (sLlaves[iIndex] != "MUL")
                         {
                             CrearTextBoxNumerico(nombreComponente, controlPosition);
-                            Console.WriteLine("COMPONENTE NOMBRE: "+ nombreComponente);
+                            Console.WriteLine("COMPONENTE NOMBRE: " + nombreComponente);
                         }
                         else
                         {
@@ -1128,7 +1213,7 @@ namespace Capa_Vista_Navegador
                     case "date":
                     case "datetime":
                         arrTipoCampos[iIndex] = "Date";
-                        if (sLlaves[iIndex] != "MUL" && sLlaves[iIndex] !="PRI")
+                        if (sLlaves[iIndex] != "MUL" && sLlaves[iIndex] != "PRI")
                         {
                             CrearDateTimePicker(nombreComponente, controlPosition);
                             Console.WriteLine("COMPONENTE NOMBRE: " + nombreComponente);
@@ -1600,7 +1685,7 @@ namespace Capa_Vista_Navegador
                     componente.Enabled = true; // Habilita todos los TextBox, DateTimePicker y ComboBox para edición
                 }
             }
-           // Btn_Modificar.Enabled = true;
+            // Btn_Modificar.Enabled = true;
             Btn_Eliminar.Enabled = true;
             Btn_Guardar.Enabled = true;
             Btn_Cancelar.Enabled = true;
@@ -1734,6 +1819,7 @@ namespace Capa_Vista_Navegador
         }
         string CrearInsert(string sNombreTabla)
         {
+            
             // Inicializa las cadenas para la consulta INSERT y los valores a insertar
             string sQuery = "INSERT INTO " + sNombreTabla + " (";
             string sValores = "VALUES (";
@@ -1812,11 +1898,12 @@ namespace Capa_Vista_Navegador
 
         string CrearInsertParaAsociativas(string nombreTabla, Dictionary<string, string> valoresCampos)
         {
+           
             if (string.IsNullOrEmpty(nombreTabla))
             {
                 throw new ArgumentException("El nombre de la tabla no puede estar vacío.");
             }
-
+            
             string sQuery = $"INSERT INTO {nombreTabla} (";
             string sValores = "VALUES (";
 
@@ -1858,14 +1945,70 @@ namespace Capa_Vista_Navegador
             return sQuery;
         }
 
+        private bool RealizarOperacionPorFila(string valorOrigen, string valorCondicional, OperacionCampo operacion)
+        {
+            try
+            {
+                // Obtener el valor actual del campo destino en la base de datos
+                string valorDestino = logic.ObtenerValorCampo(
+                    operacion.TablaDestino,
+                    operacion.CampoDestino,
+                    operacion.CampoCondicional,
+                    valorCondicional
+                );
 
+                // Convertir los valores de origen y destino al tipo numérico adecuado
+                int valorNumOrigen = int.Parse(valorOrigen);
+                int valorNumDestino = string.IsNullOrEmpty(valorDestino) ? 0 : int.Parse(valorDestino); // Usar 0 si está vacío
+
+                // Realizar la operación especificada
+                int resultadoOperacion = 0;
+                switch (operacion.Operacion.ToLower())
+                {
+                    case "copiar":
+                        resultadoOperacion = valorNumOrigen;
+                        break;
+                    case "sumar":
+                        resultadoOperacion = valorNumDestino + valorNumOrigen;
+                        break;
+                    case "restar":
+                        resultadoOperacion = valorNumDestino - valorNumOrigen;
+                        if (resultadoOperacion < 0)
+                        {
+                            Console.WriteLine("Error: El resultado de la resta no puede ser negativo.");
+                            return false;
+                        }
+                        break;
+                    default:
+                        Console.WriteLine("Operación no reconocida.");
+                        return false;
+                }
+
+                // Actualizar el valor en la base de datos
+                logic.ActualizarCampo(
+                    operacion.TablaDestino,
+                    operacion.CampoDestino,
+                    resultadoOperacion.ToString(),
+                    operacion.CampoCondicional,
+                    valorCondicional);
+
+                Console.WriteLine($"Operación '{operacion.Operacion}' realizada exitosamente en {operacion.CampoDestino} con resultado: {resultadoOperacion}");
+                return true; // Operación realizada con éxito
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al realizar la operación en la fila: {ex.Message}");
+                return false;
+            }
+        }
+
+        List<string> lstQueries2 = new List<string>();
         List<string> CrearInsertDesdeDataGridView(string sNombreTabla, string idForaneo, DataGridView dgvProductos)
         {
-            List<string> lstQueries = new List<string>();
+            List<string> lstConsultasLocales = new List<string>(); // Lista temporal para almacenar las consultas de esta ejecución
             var columnasPropiedades = logic.ObtenerColumnasYPropiedadesLogica(sNombreTabla);
             string sClaveForanea = logic.ObtenerClaveForanea(sNombreTabla, sTablaPrincipal);
 
-            // Verificar que la clave foránea esté en los campos de la tabla
             if (!columnasPropiedades.Any(c => c.nombreColumna == sClaveForanea))
             {
                 Console.WriteLine($"Error: La clave foránea {sClaveForanea} no existe en los campos de {sNombreTabla}.");
@@ -1874,7 +2017,7 @@ namespace Capa_Vista_Navegador
 
             foreach (DataGridViewRow fila in dgvProductos.Rows)
             {
-                if (fila.IsNewRow) continue;
+                if (fila.IsNewRow) continue; // Omitir la fila vacía para entrada de nuevos datos
 
                 string sQuery = $"INSERT INTO {sNombreTabla} ({sClaveForanea}, ";
                 string sValores = $"VALUES ('{idForaneo}', ";
@@ -1887,16 +2030,11 @@ namespace Capa_Vista_Navegador
                     if (dgvProductos.Columns.Contains(nombreColumna))
                     {
                         DataGridViewCell celda = fila.Cells[nombreColumna];
-                        string sValorCampo = "";
+                        string sValorCampo = celda?.Value?.ToString() ?? "";
 
                         if (esTinyInt && celda is DataGridViewButtonCell)
                         {
-                            // Asigna "1" para activado y "0" para desactivado
                             sValorCampo = (celda.Style.BackColor == Color.Green) ? "1" : "0";
-                        }
-                        else
-                        {
-                            sValorCampo = celda?.Value?.ToString() ?? "";
                         }
 
                         if (!string.IsNullOrEmpty(sValorCampo))
@@ -1912,17 +2050,19 @@ namespace Capa_Vista_Navegador
                 {
                     sQuery = sQuery.TrimEnd(' ', ',') + ") ";
                     sValores = sValores.TrimEnd(' ', ',') + ");";
-
                     string fullQuery = sQuery + sValores;
                     Console.WriteLine("CONSULTA GENERADA PARA GRID: " + fullQuery);
-                    lstQueries.Add(fullQuery);
+                    lstConsultasLocales.Add(fullQuery); // Agregar a la lista temporal
                 }
             }
 
-            return lstQueries;
+            lstQueries2.AddRange(lstConsultasLocales); // Agregar las consultas locales a la lista global `lstQueries2`
+            return lstConsultasLocales;
         }
+
         string CrearInsertDesdeControles(string sNombreTabla, string idForaneo)
         {
+            
             var columnasPropiedades = logic.ObtenerColumnasYPropiedadesLogica(sNombreTabla);
             string sClaveForanea = logic.ObtenerClaveForanea(sNombreTabla, sTablaPrincipal);
 
@@ -2178,12 +2318,11 @@ namespace Capa_Vista_Navegador
         private void Btn_Ingresar_Click(object sender, EventArgs e)
         {
             string[] arrTipos = logic.Tipos(sTablaPrincipal);
-            string[] arrLlaves = logic.Llaves(sTablaPrincipal); // Llaves de la tabla principal
+            string[] arrLlaves = logic.Llaves(sTablaPrincipal);
             bool bTipoInt = false;
             string sAuxId = "";
             int iAuxLastId = 0;
 
-            // Verifica si el primer campo de la tabla principal es de tipo entero y autoincremental
             if (arrTipos[0].Contains("int") && arrLlaves[0] == "PRI")
             {
                 bTipoInt = true;
@@ -2191,35 +2330,25 @@ namespace Capa_Vista_Navegador
                 iAuxLastId = !string.IsNullOrEmpty(sAuxId) ? Int32.Parse(sAuxId) : 0;
             }
 
-            iActivar = 2; // Define que se realizará una inserción
+            iActivar = 2;
             HabilitarCampos_y_Botones();
 
             foreach (Control componente in Controls)
             {
-                string nombreComponente = componente.Name.Replace("extra_", ""); // Elimina el prefijo "extra_" si existe
+                string nombreComponente = componente.Name.Replace("extra_", "");
 
-                // Verifica si es el campo autoincremental en la tabla principal
                 if (componente is TextBox && bTipoInt && nombreComponente == arrLlaves[0])
                 {
                     iAuxLastId += 1;
                     componente.Text = iAuxLastId.ToString();
-                    componente.Enabled = false; // Bloquea el campo autoincremental
+                    componente.Enabled = false;
                 }
-                else if (componente.Name.Contains("extra"))
+                else if (componente.Name.StartsWith("extra_"))
                 {
-                    foreach (string nombreTablaAdicional in lstTablasParaComponentes)
+                    componente.Enabled = true;
+                    if (componente is TextBox || componente is ComboBox || componente is DateTimePicker)
                     {
-                        string[] arrTiposAdicional = logic.Tipos(nombreTablaAdicional);
-                        string[] arrLlavesAdicional = logic.Llaves(nombreTablaAdicional);
-
-                        if (arrTiposAdicional[0] == "int" && arrLlavesAdicional[0] == nombreComponente)
-                        {
-                            sAuxId = logic.UltimoID(nombreTablaAdicional);
-                            iAuxLastId = !string.IsNullOrEmpty(sAuxId) ? Int32.Parse(sAuxId) : 0;
-                            iAuxLastId += 1;
-                            componente.Text = iAuxLastId.ToString();
-                            componente.Enabled = false; // Bloquea el campo autoincremental
-                        }
+                        componente.Text = "";
                     }
                 }
                 else if (componente is TextBox || componente is DateTimePicker || componente is ComboBox)
@@ -2228,6 +2357,7 @@ namespace Capa_Vista_Navegador
                     componente.Text = "";
                 }
             }
+
             if (IngresarVariosControl != null)
             {
                 IngresarVariosControl.Btn_agregar.Enabled = true;
@@ -2242,7 +2372,7 @@ namespace Capa_Vista_Navegador
             Btn_Eliminar.Enabled = false;
             Btn_Cancelar.Enabled = true;
 
-            BotonesYPermisosSinMensaje(); // Actualiza los permisos de los botones
+            BotonesYPermisosSinMensaje();
         }
 
         //******************************************** CODIGO HECHO POR DIEGO MARROQUIN***************************** 
@@ -3105,6 +3235,8 @@ namespace Capa_Vista_Navegador
                     );
                     return;
                 }
+             
+                EjecutarReglasCondicionales();
                 if (IngresarVariosControl != null && IngresarVariosControl.DataGridViewInformacionExtra != null)
                 {
                     // Verifica si la grid extra está vacía
@@ -3120,11 +3252,7 @@ namespace Capa_Vista_Navegador
 
                 // Verificar las operaciones de campo antes de cualquier inserción
                 // Ejecutamos todas las operaciones de la lista de una sola vez
-                if (!RealizarOperaciones())
-                    {
-                        MessageBox.Show("Error en las operaciones de campos. No se pudo completar una o más operaciones.", "Error de Operación", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return; // Cancelamos si alguna operación no es válida
-                    }
+                
 
               
 
@@ -3182,7 +3310,13 @@ namespace Capa_Vista_Navegador
                     case 2: // Insertar
                         try
                         {
-                            // Inserta el registro en la tabla principal
+                            if (!GenerarConsultasOperaciones())
+                            {
+                                MessageBox.Show("Error en las operaciones de campos. No se completarán las inserciones.", "Error de Operación", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                lstQueries2.Clear();
+                                Deshabilitarcampos_y_botones();
+                                return; // Salir si ocurre un error en las operaciones
+                            }
                             string sQueryPrimeraTabla = CrearInsert(sTablaPrincipal);
                             Console.WriteLine("Consulta generada para la tabla principal: " + sQueryPrimeraTabla);
 
@@ -3192,9 +3326,25 @@ namespace Capa_Vista_Navegador
                                 return;
                             }
 
-                            // Ejecuta la inserción en la tabla principal primero
-                            logic.NuevoQuery(sQueryPrimeraTabla);
-                            Console.WriteLine("Registro insertado en la tabla principal exitosamente.");
+                            // Agregar consulta principal a la lista
+
+
+                            // Llama a las funciones de creación de insert en la grid y controles
+
+                            // Ejecuta la transacción completa solo si hay consultas
+                            if (lstQueries2.Count > 0)
+                            {
+                                lstQueries2.Add(sQueryPrimeraTabla);
+                                logic.InsertarDatosEnMultiplesTablas(lstQueries2);
+                                MessageBox.Show("Transacción completada exitosamente.", "Operación Exitosa", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            }
+                            else
+                            {
+                                logic.NuevoQuery(sQueryPrimeraTabla);
+                            }
+
+                            // Limpiar lstQueries2 después de la transacción
+                            lstQueries2.Clear();
 
                             // Obtén el último ID insertado para utilizarlo en las tablas adicionales
                             string sUltimoIdPrimeraTabla = logic.UltimoID(sTablaPrincipal);
